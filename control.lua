@@ -8,6 +8,8 @@ script.on_init(function()
 	storage.players = {}
 	storage.events = {}
 	storage.refs = {}
+	storage.proxy_cache = {}
+	storage.p = Proxy.wrap({ controls_active = false }, "p")
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
@@ -32,3 +34,12 @@ end)
 -- 		control_toggle.caption = player_storage.controls_active and { "ugg.deactivate" } or { "ugg.activate" }
 -- 	end
 -- end)
+
+remote.add_interface("human interactor", {
+	flip = function()
+		storage.p.b = nil
+	end,
+	bye = function(name)
+		game.player.print("Bye " .. name)
+	end,
+})

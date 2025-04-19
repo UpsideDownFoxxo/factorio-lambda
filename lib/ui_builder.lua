@@ -1,6 +1,6 @@
 local Events = require("lib/events")
 
-local m = {}
+local m = { effects = {} }
 
 local creation_vars = (function()
 	local t = {
@@ -23,19 +23,19 @@ local creation_vars = (function()
 	return tc
 end)()
 
----Mounts the UI element inside the markup to the root GUI element
----@param el any
----@param root LuaGuiElement
-m.build = function(el, root)
+local function build_func(el, root, effects)
 	local lua_el
-	if el.type == nil then
-		el.type = "frame"
-	end
 
 	local opts = {}
+	el.props.type = el.props[1]
+	el.props.name = el.props[2]
+	el.props[1] = nil
+	el.props[2] = nil
+
 	for k, _ in pairs(creation_vars) do
-		opts[k] = el[k]
+		opts[k] = el.props[k]
 	end
+
 	lua_el = root.add(opts)
 
 	for k, v in pairs(el._inlinestyle or {}) do
@@ -48,15 +48,45 @@ m.build = function(el, root)
 	end
 
 	for k, v in pairs(el) do
-		if creation_vars[k] then
 		-- keys indexed with numbers are considered child elements
-		elseif type(k) == "number" then
+		if type(k) == "number" then
 			m.build(v, lua_el)
-		elseif k:sub(1, 1) == "_" then
-		else
-			-- dump all other top-level keys not starting with _ into the lua element
+		end
+	end
+
+	for k, v in pairs(el.props) do
+		if not creation_vars[k] then
 			lua_el[k] = v
 		end
+	end
+
+	for _, effect in pairs(el._effects or {}) do
+		local f, deps = table.unpack(effect)
+
+		for _, dep in pairs(deps) do
+			if not m.effects[dep] then
+				m.effects[dep] = {}
+			end
+
+			local g = function()
+				f({ self = lua_el })
+			end
+
+			table.insert(m.effects[dep], g)
+			table.insert(effects, g)
+		end
+	end
+end
+
+---Mounts the UI element inside the markup to the root GUI element
+---@param el any
+---@param root LuaGuiElement
+m.build = function(el, root)
+	local effects = {}
+	build_func(el, root, effects)
+
+	for _, f in pairs(effects) do
+		f()
 	end
 end
 
@@ -67,11 +97,14 @@ m.register = function(t)
 	end
 
 	if t._click then
-		Events.register_click(t._click, t.name)
+		assert(t.props[2] and type(t.props[2]) == "string", "Elements with click events must have a name")
+		Events.register_click(t._click, t.props[2])
 	end
 
-	for _, v in pairs(t) do
-		m.register(v)
+	for k, v in pairs(t) do
+		if type(k) == "number" then
+			m.register(v)
+		end
 	end
 end
 
