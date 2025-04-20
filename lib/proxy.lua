@@ -2,7 +2,11 @@ local Built = require("lib/build_results")
 
 local m = {}
 
----@type table<table,Proxy>
+---@class Proxy
+---@field __data any
+---@field __parents table<Proxy,table<string,boolean>>
+---@field __root string|nil
+---@field __owner number|nil
 
 ---@param data table
 ---@return Proxy
@@ -37,12 +41,6 @@ local function get_proxy_path(proxy)
 	end
 	return results
 end
-
----@class Proxy
----@field __data any
----@field __parents table<Proxy,table<string,boolean>>
----@field __root string|nil
----@field __owner number|nil
 
 local Proxy = {}
 

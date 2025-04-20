@@ -12,9 +12,35 @@ local item_sprites = {
 }
 
 local ex = {
-	props = { "frame", "ugg_main_frame", caption = { "ugg.hello_world" }, auto_center = true },
+	props = { "frame", "ugg_main_frame", auto_center = true, direction = "vertical" },
 	_inlinestyle = { size = { 385, 165 } },
+	_ref = "frame",
 
+	{
+		props = { "flow", direction = "horizontal", style = "ugg_header_flow" },
+		{
+			props = {
+				"label",
+				style = "ugg_header_title",
+				caption = { "ugg.hello_world" },
+			},
+		},
+		{
+			props = {
+				"empty-widget",
+				style = "ugg_draggable_header",
+				drag_target = "frame",
+			},
+		},
+
+		{
+			props = {
+				"sprite-button",
+				sprite = "utility/close",
+				style = "close_button",
+			},
+		},
+	},
 	{
 		props = { "frame", "content_frame", direction = "vertical", style = "ugg_content_frame" },
 		{

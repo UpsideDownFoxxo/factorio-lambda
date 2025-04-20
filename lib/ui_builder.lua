@@ -17,6 +17,7 @@ local creation_vars = (function()
 		"allow_decimal",
 		"allow_negative",
 		"text",
+		"height",
 	}
 	local tc = {}
 	for _, v in pairs(t) do
@@ -38,7 +39,10 @@ local function build_func(el, root, effects)
 		opts[k] = el.props[k]
 	end
 
+	---@type LuaGuiElement
 	lua_el = root.add(opts)
+
+	assert(lua_el, "Failed to create element")
 
 	for k, v in pairs(el._inlinestyle or {}) do
 		lua_el.style[k] = v
@@ -49,11 +53,13 @@ local function build_func(el, root, effects)
 		storage.reactive.refs[lua_el.player_index][el._ref] = lua_el
 	end
 
-	for k, v in pairs(el) do
-		-- keys indexed with numbers are considered child elements
-		if type(k) == "number" then
-			m.build(v, lua_el)
+	if el.props.drag_target then
+		if type(el.props.drag_target) == "string" then
+			local t = m.ref(el.props.drag_target, { player_index = lua_el.player_index })
+			lua_el.drag_target = t
+			el.props.drag_target = nil
 		end
+		-- we do not question if the user somehow managed to get a valid element reference in here
 	end
 
 	for k, v in pairs(el.props) do
@@ -74,6 +80,13 @@ local function build_func(el, root, effects)
 			table.insert(effects, { fn = f, self = lua_el })
 		end
 	end
+
+	for k, v in pairs(el) do
+		-- keys indexed with numbers are considered child elements
+		if type(k) == "number" then
+			m.build(v, lua_el)
+		end
+	end
 end
 
 ---Mounts the UI element inside the markup to the root GUI element
@@ -92,7 +105,7 @@ m.build = function(el, root)
 end
 
 local n = 1
---- (Re)-register non-serializable aspects of components.
+-- (Re)-register non-serializable aspects of components.
 m.register = function(t)
 	if type(t) ~= "table" then
 		return
@@ -118,7 +131,7 @@ end
 
 ---Returns the element saved as ref, if any
 ---@param str string
----@param event EventData.on_gui_click | EventData.on_gui_text_changed
+---@param event {player_index : number}
 ---@return LuaGuiElement|nil
 m.ref = function(str, event)
 	local i = event.player_index

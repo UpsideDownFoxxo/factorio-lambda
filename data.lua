@@ -30,6 +30,31 @@ styles["ugg_deep_frame"] = {
 	bottom_margin = 4,
 }
 
+styles["ugg_header_flow"] = {
+	type = "horizontal_flow_style",
+	parent = "frame_header_flow",
+	vertically_stretchable = "off",
+}
+
+styles["ugg_header_title"] = {
+	type = "label_style",
+	parent = "frame_title",
+	vertically_stretchable = "on",
+	horizontally_squashable = "on",
+	top_margin = -3,
+	bottom_padding = 3,
+}
+
+styles["ugg_draggable_header"] = {
+	type = "empty_widget_style",
+	parent = "draggable_space_header",
+	right_margin = 4,
+	horizontally_stretchable = "on",
+	vertically_stretchable = "off",
+	height = 24,
+	natural_height = 24,
+}
+
 data:extend({
 	{
 		type = "custom-input",
