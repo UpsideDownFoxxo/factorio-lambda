@@ -1,15 +1,20 @@
+require("util")
 local Proxy = require("lib/proxy")
 local Builder = require("lib/ui_builder")
 local example = require("lib/ui_example")
+local PlayerScope = require("lib/player_scope")
 
 Builder.register(example)
 
 script.on_init(function()
-	storage.players = {}
-	storage.events = {}
-	storage.refs = {}
-	storage.proxy_cache = {}
-	storage.g = Proxy.wrap({ controls_active = false }, "g")
+	storage.reactive = {
+		refs = {},
+		proxy_cache = {},
+		player_scopes = {},
+		effects = {},
+	}
+
+	storage.g = Proxy.wrap({ controls_active = false, e = {} }, "g")
 end)
 
 script.on_event(defines.events.on_player_created, function(event)
@@ -18,9 +23,16 @@ script.on_event(defines.events.on_player_created, function(event)
 		return
 	end
 
+	PlayerScope.add_player_scope(event.player_index)
+
 	local screen_element = player.gui.screen
 
 	Builder.build(example, screen_element)
-
-	storage.players[player.index] = { controls_active = true }
 end)
+
+remote.add_interface("reactive", {
+	flip = function(player_index)
+		storage.reactive.player_scopes[player_index].controls_active =
+			not storage.reactive.player_scopes[player_index].controls_active
+	end,
+})

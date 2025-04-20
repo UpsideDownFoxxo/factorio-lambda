@@ -1,6 +1,8 @@
+local Result = require("lib/build_results")
 local Events = require("lib/events")
+local PlayerScope = require("lib/player_scope")
 
-local m = { effects = {} }
+local m = {}
 
 local creation_vars = (function()
 	local t = {
@@ -43,8 +45,8 @@ local function build_func(el, root, effects)
 	end
 
 	if el._ref then
-		storage.refs[lua_el.player_index] = storage.refs[lua_el.player_index] or {}
-		storage.refs[lua_el.player_index][el._ref] = lua_el
+		storage.reactive.refs[lua_el.player_index] = storage.reactive.refs[lua_el.player_index] or {}
+		storage.reactive.refs[lua_el.player_index][el._ref] = lua_el
 	end
 
 	for k, v in pairs(el) do
@@ -64,16 +66,12 @@ local function build_func(el, root, effects)
 		local f, deps = table.unpack(effect)
 
 		for _, dep in pairs(deps) do
-			if not m.effects[dep] then
-				m.effects[dep] = {}
+			if not storage.reactive.effects[dep] then
+				storage.reactive.effects[dep] = {}
 			end
 
-			local g = function()
-				f({ self = lua_el })
-			end
-
-			table.insert(m.effects[dep], g)
-			table.insert(effects, g)
+			table.insert(storage.reactive.effects[dep], { fn = f, self = lua_el })
+			table.insert(effects, { fn = f, self = lua_el })
 		end
 	end
 end
@@ -82,15 +80,19 @@ end
 ---@param el any
 ---@param root LuaGuiElement
 m.build = function(el, root)
-	local effects = {}
-	build_func(el, root, effects)
+	PlayerScope.run(root.player_index, function()
+		---@type {fn:number,self:LuaGuiElement}
+		local effects = {}
+		build_func(el, root, effects)
 
-	for _, f in pairs(effects) do
-		f()
-	end
+		for _, f in pairs(effects) do
+			Result.effect_fns[f.fn](f)
+		end
+	end)
 end
 
----Initialize GUI element from markup.
+local n = 1
+--- (Re)-register non-serializable aspects of components.
 m.register = function(t)
 	if type(t) ~= "table" then
 		return
@@ -99,6 +101,12 @@ m.register = function(t)
 	if t._click then
 		assert(t.props[2] and type(t.props[2]) == "string", "Elements with click events must have a name")
 		Events.register_click(t._click, t.props[2])
+	end
+
+	for _, value in pairs(t._effects or {}) do
+		Result.effect_fns[n] = value[1]
+		value[1] = n
+		n = n + 1
 	end
 
 	for k, v in pairs(t) do
@@ -114,7 +122,7 @@ end
 ---@return LuaGuiElement|nil
 m.ref = function(str, event)
 	local i = event.player_index
-	return (storage.refs[i] or {})[str]
+	return (storage.reactive.refs[i] or {})[str]
 end
 
 return m

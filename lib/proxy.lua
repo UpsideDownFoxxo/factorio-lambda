@@ -1,4 +1,4 @@
-local Built = require("lib/ui_builder")
+local Built = require("lib/build_results")
 
 local m = {}
 
@@ -7,12 +7,12 @@ local m = {}
 ---@param data table
 ---@return Proxy
 local function get_proxy(data)
-	return storage.proxy_cache[data] or m.wrap(data)
+	return storage.reactive.proxy_cache[data] or m.wrap(data)
 end
 
 ---Resolves a proxy to all possible paths
 ---@param proxy Proxy
----@return string[]
+---@return {path:string,owner:number|nil}[]
 local function get_proxy_path(proxy)
 	local parents = proxy.__parents
 	for _, _ in pairs(parents) do
@@ -20,7 +20,7 @@ local function get_proxy_path(proxy)
 	end
 
 	do
-		return { proxy.__root or "" }
+		return { { path = proxy.__root or "", owner = proxy.__owner } }
 	end
 
 	::c::
@@ -31,7 +31,7 @@ local function get_proxy_path(proxy)
 		local parent_paths = get_proxy_path(parent)
 		for _, v in pairs(parent_paths) do
 			for k, _ in pairs(key) do
-				table.insert(results, (v == "" and v or (v .. ".")) .. k)
+				table.insert(results, { path = (v.path == "" and "" or (v.path .. ".")) .. k, owner = v.owner })
 			end
 		end
 	end
@@ -42,11 +42,11 @@ end
 ---@field __data any
 ---@field __parents table<Proxy,table<string,boolean>>
 ---@field __root string|nil
+---@field __owner number|nil
 
 local Proxy = {}
 
 Proxy.__index = function(table, key)
-	game.print("read aceess on key " .. key)
 	local value = table.__data[key]
 	if type(value) == "table" then
 		local proxy = get_proxy(value)
@@ -80,10 +80,18 @@ Proxy.__newindex = function(table, key, value)
 
 	local paths = get_proxy_path(table)
 	for _, v in pairs(paths) do
-		local path = (v == "" and "" or (v .. ".")) .. key
+		local path = (v.path == "" and "" or (v.path .. ".")) .. key
+		local player = v.owner
 		game.print("write access on " .. path)
-		for _, effect in pairs(Built.effects[path] or {}) do
-			effect()
+		for _, effect in pairs(storage.reactive.effects[path] or {}) do
+			local previous = storage.p
+			if player then
+				storage.p = storage.reactive.player_scopes[player]
+			else
+				storage.p = nil
+			end
+			Built.effect_fns[effect.fn](effect)
+			storage.p = previous
 		end
 	end
 end
@@ -117,14 +125,15 @@ script.register_metatable("proxy_meta", Proxy)
 ---@generic T
 ---@param data T
 ---@return T
-m.wrap = function(data, root_name)
+m.wrap = function(data, root_name, owner)
 	local self = {
 		__data = data,
 		__parents = {},
 		__root = root_name,
+		__owner = owner,
 	}
 	local proxy = setmetatable(self, Proxy)
-	storage.proxy_cache[data] = proxy
+	storage.reactive.proxy_cache[data] = proxy
 	return proxy
 end
 

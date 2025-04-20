@@ -22,15 +22,21 @@ local ex = {
 			{
 				props = { "button", "ugg_controls_toggle", caption = { "ugg.deactivate" } },
 				_click = function()
-					storage.g.controls_active = not storage.g.controls_active
+					storage.p.controls_active = not storage.p.controls_active
 				end,
 
 				_effects = {
 					{
 						function(e)
-							e.self.caption = storage.g.controls_active and { "ugg.deactivate" } or { "ugg.activate" }
+							e.self.caption = storage.p.e.controls_active and { "ugg.deactivate" } or { "ugg.activate" }
 						end,
-						{ "g.controls_active" },
+						{ "p.e.controls_active" },
+					},
+					{
+						function()
+							storage.p.e.controls_active = storage.p.controls_active
+						end,
+						{ "p.controls_active" },
 					},
 				},
 			},
@@ -46,9 +52,9 @@ local ex = {
 				_effects = {
 					{
 						function(e)
-							e.self.enabled = storage.g.controls_active
+							e.self.enabled = storage.p.controls_active
 						end,
-						{ "g.controls_active" },
+						{ "p.controls_active" },
 					},
 				},
 			},
@@ -65,9 +71,9 @@ local ex = {
 				_effects = {
 					{
 						function(e)
-							e.self.enabled = storage.g.controls_active
+							e.self.enabled = storage.p.controls_active
 						end,
-						{ "g.controls_active" },
+						{ "p.controls_active" },
 					},
 				},
 			},
