@@ -12,9 +12,10 @@ script.on_init(function()
 		proxy_cache = {},
 		player_scopes = {},
 		effects = {},
+		effect_clean = {},
 	}
 
-	storage.g = Proxy.wrap({ controls_active = false, e = {} }, "g")
+	-- storage.g = Proxy.wrap({ controls_active = false, e = {} }, "g")
 end)
 
 script.on_event(defines.events.on_player_created, function(event)

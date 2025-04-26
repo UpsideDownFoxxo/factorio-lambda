@@ -19,15 +19,10 @@ end
 ---@return {path:string,owner:number|nil}[]
 local function get_proxy_path(proxy)
 	local parents = proxy.__parents
-	for _, _ in pairs(parents) do
-		goto c
-	end
 
-	do
+	if next(parents) == nil then
 		return { { path = proxy.__root or "", owner = proxy.__owner } }
 	end
-
-	::c::
 
 	local results = {}
 
@@ -80,15 +75,19 @@ Proxy.__newindex = function(table, key, value)
 	for _, v in pairs(paths) do
 		local path = (v.path == "" and "" or (v.path .. ".")) .. key
 		local player = v.owner
-		game.print("write access on " .. path)
-		for _, effect in pairs(storage.reactive.effects[path] or {}) do
+
+		for effect, _ in pairs(storage.reactive.effects[path] or {}) do
 			local previous = storage.p
 			if player then
 				storage.p = storage.reactive.player_scopes[player]
 			else
 				storage.p = nil
 			end
-			Built.effect_fns[effect.fn](effect)
+			if effect.self.valid then
+				Built.effect_fns[effect.fn](effect)
+			else
+				game.print("Encountered stale effect, ignoring")
+			end
 			storage.p = previous
 		end
 	end

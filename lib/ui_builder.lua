@@ -18,6 +18,7 @@ local creation_vars = (function()
 		"allow_negative",
 		"text",
 		"height",
+		"column_count",
 	}
 	local tc = {}
 	for _, v in pairs(t) do
@@ -56,10 +57,14 @@ local function build_func(el, root, effects)
 	if el.props.drag_target then
 		if type(el.props.drag_target) == "string" then
 			local t = m.ref(el.props.drag_target, { player_index = lua_el.player_index })
+			game.print("draggy")
 			lua_el.drag_target = t
 			el.props.drag_target = nil
+		else
+			-- we do not question if the user somehow managed to get a valid element reference in here
+			lua_el.drag_target = el.props.drag_target
+			el.props.drag_target = nil
 		end
-		-- we do not question if the user somehow managed to get a valid element reference in here
 	end
 
 	for k, v in pairs(el.props) do
@@ -70,14 +75,20 @@ local function build_func(el, root, effects)
 
 	for _, effect in pairs(el._effects or {}) do
 		local f, deps = table.unpack(effect)
+		local id = script.register_on_object_destroyed(lua_el)
+
+		local effect_descriptor = { fn = f, self = lua_el, player_index = lua_el.player_index, deps = deps }
+
+		storage.reactive.effect_clean[id] = storage.reactive.effect_clean[id] or {}
+		table.insert(storage.reactive.effect_clean[id], effect_descriptor)
+
+		table.insert(effects, effect_descriptor)
 
 		for _, dep in pairs(deps) do
 			if not storage.reactive.effects[dep] then
 				storage.reactive.effects[dep] = {}
 			end
-
-			table.insert(storage.reactive.effects[dep], { fn = f, self = lua_el })
-			table.insert(effects, { fn = f, self = lua_el })
+			storage.reactive.effects[dep][effect_descriptor] = true
 		end
 	end
 
@@ -112,8 +123,18 @@ m.register = function(t)
 	end
 
 	if t._click then
-		assert(t.props[2] and type(t.props[2]) == "string", "Elements with click events must have a name")
+		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
 		Events.register_click(t._click, t.props[2])
+	end
+
+	if t._value_changed then
+		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
+		Events.register_value_changed(t._value_changed, t.props[2])
+	end
+
+	if t._text_changed then
+		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
+		Events.register_text_changed(t._text_changed, t.props[2])
 	end
 
 	for _, value in pairs(t._effects or {}) do
@@ -134,8 +155,18 @@ end
 ---@param event {player_index : number}
 ---@return LuaGuiElement|nil
 m.ref = function(str, event)
-	local i = event.player_index
-	return (storage.reactive.refs[i] or {})[str]
+	local el = (storage.reactive.refs[event.player_index] or {})[str]
+	if not el then
+		return nil
+	end
+
+	if not el.valid then
+		storage.reactive.refs[event.player_index][str] = nil
+		game.print("removed stale ref")
+		return nil
+	end
+
+	return el
 end
 
 return m
