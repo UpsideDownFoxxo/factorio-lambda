@@ -93,7 +93,11 @@ local example = {
 			{
 				props = { "table", "button_table", column_count = #item_sprites, style = "filter_slot_table" },
 				_for = { "p.icons" },
-				{ props = { "sprite-button", sprite = "item/sulfur", style = "slot_button" } },
+				{
+					props = function(e)
+						return { "sprite-button", "button_" .. e, sprite = "item/" .. e, style = "slot_button" }
+					end,
+				},
 			},
 		},
 	},

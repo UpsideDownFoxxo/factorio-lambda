@@ -1,6 +1,6 @@
 require("util")
 require("lib/interfaces")
-local Proxy = require("lib/proxy")
+require("lib/internal_effects")
 local Builder = require("lib/ui_builder")
 local example = require("lib/ui_example")
 local PlayerScope = require("lib/player_scope")
@@ -17,9 +17,11 @@ script.on_init(function()
 		effects = {},
 		---@type table<number,EffectDescriptor[]>
 		effect_clean = {},
+		dynamic = {
+			---@type table<LuaGuiElement,ForBlockMetadata>
+			for_blocks = {},
+		},
 	}
-
-	-- storage.g = Proxy.wrap({ controls_active = false, e = {} }, "g")
 end)
 
 script.on_event(defines.events.on_player_created, function(event)

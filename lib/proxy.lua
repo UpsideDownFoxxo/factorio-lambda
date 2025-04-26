@@ -40,9 +40,6 @@ end
 local Proxy = {}
 
 Proxy.__index = function(table, key)
-	if type(table.__data) == "boolean" then
-		game.print("aua")
-	end
 	local value = table.__data[key]
 	if type(value) == "table" then
 		local proxy = get_proxy(value)
@@ -64,7 +61,6 @@ Proxy.__newindex = function(table, key, value)
 	-- table has been replaced, remove parent/child relationship
 	if type(table.__data[key]) == "table" then
 		local p = get_proxy(table.__data[key])
-		print(serpent.line(p.__parents))
 		p.__parents[table][key] = nil
 	end
 
@@ -170,9 +166,6 @@ end
 ---@param data T
 ---@return T
 m.wrap_shallow = function(data, root_name, owner)
-	if type(data) ~= "table" then
-		game.print("aua")
-	end
 	local self = {
 		__id = storage.reactive.proxy_id,
 		__data = data,

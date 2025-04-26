@@ -1,5 +1,4 @@
 local Result = require("lib/build_results")
-require("lib/internal_effects")
 local Events = require("lib/events")
 local PlayerScope = require("lib/player_scope")
 
@@ -28,16 +27,34 @@ local creation_vars = (function()
 	return tc
 end)()
 
-local build_func
+local ignore_vars = (function()
+	local t = {
+		"type",
+		"name",
+		"caption",
+		"direction",
+		"value",
+		"minimum_value",
+		"maximum_value",
+		"numeric",
+		"allow_decimal",
+		"allow_negative",
+		"text",
+		"height",
+		"column_count",
+		"drag_target",
+	}
+	local tc = {}
+	for _, v in pairs(t) do
+		tc[v] = true
+	end
+	return tc
+end)()
 
 local function build_element(el, root, effects)
 	local lua_el
 
 	local opts = {}
-	el.props.type = el.props[1]
-	el.props.name = el.props[2]
-	el.props[1] = nil
-	el.props[2] = nil
 
 	for k, _ in pairs(creation_vars) do
 		opts[k] = el.props[k]
@@ -58,6 +75,7 @@ local function build_element(el, root, effects)
 	end
 
 	if el._for then
+		-- effect registration
 		local id = script.register_on_object_destroyed(lua_el)
 
 		local dep = el._for[1]
@@ -74,6 +92,9 @@ local function build_element(el, root, effects)
 		storage.reactive.effects[dep][effect_descriptor] = true
 
 		table.insert(effects, effect_descriptor)
+
+		-- save for block data
+		storage.reactive.dynamic.for_blocks[lua_el] = { child_keys = {}, markup = el[1] }
 	end
 
 	if el.props.drag_target then
@@ -84,12 +105,11 @@ local function build_element(el, root, effects)
 		else
 			-- we do not question if the user somehow managed to get a valid element reference in here
 			lua_el.drag_target = el.props.drag_target
-			el.props.drag_target = nil
 		end
 	end
 
 	for k, v in pairs(el.props) do
-		if not creation_vars[k] then
+		if not ignore_vars[k] then
 			lua_el[k] = v
 		end
 	end
@@ -113,21 +133,15 @@ local function build_element(el, root, effects)
 		end
 	end
 
-	for k, v in pairs(el) do
-		-- keys indexed with numbers are considered child elements
-		if type(k) == "number" then
-			build_func(v, lua_el, effects)
+	if not el._for then
+		for k, v in pairs(el) do
+			-- keys indexed with numbers are considered child elements
+			if type(k) == "number" then
+				build_element(v, lua_el, effects)
+			end
 		end
 	end
 	return lua_el
-end
-
-local function build_for_block(el, root, effects)
-	return build_func(el[1], root, effects)
-end
-
-build_func = function(el, root, effects)
-	return build_element(el, root, effects)
 end
 
 ---Mounts the UI element inside the markup to the root GUI element
@@ -139,7 +153,36 @@ m.build = function(el, root)
 	PlayerScope.run(root.player_index, function()
 		---@type {fn:number,self:LuaGuiElement}
 		local effects = {}
-		created = build_func(el, root, effects)
+		created = build_element(el, root, effects)
+
+		for _, f in pairs(effects) do
+			if f.fn >= 1000 then
+				Result.effect_fns[f.fn](f)
+			end
+		end
+	end)
+
+	return created
+end
+
+m.build_parametrized = function(el, root, params)
+	local el_c = table.deepcopy(el)
+
+	if type(el_c.props) == "number" then
+		el_c.props = Result.prop_fns[el_c.props](params)
+	end
+	---@diagnostic disable-next-line: inject-field
+	el_c.props.type = el_c.props[1]
+	---@diagnostic disable-next-line: inject-field
+	el_c.props.name = el_c.props[2]
+	el_c.props[1] = nil
+	el_c.props[2] = nil
+
+	local created
+	PlayerScope.run(root.player_index, function()
+		---@type {fn:number,self:LuaGuiElement}
+		local effects = {}
+		created = build_element(el_c, root, effects)
 
 		for _, f in pairs(effects) do
 			if f.fn >= 1000 then
@@ -154,28 +197,38 @@ end
 --- Used to maintain references to functions across save/load cycles
 --- IDs below 1k are reserved for internal use
 local func_id = 1000
-
-local function register_for_block(t)
-	assert(t._for[1] and type(t._for[1]) == "string", "For blocks must have a declared dependency")
-	assert(t[1] and not t[2], "For blocks must have exactly one child")
-
-	m.register(t[1])
-end
+local prop_func_id = 1
 
 local function register_element(t)
+	if type(t.props) == "table" then
+		t.props.type = t.props[1]
+		t.props.name = t.props[2]
+		t.props[1] = nil
+		t.props[2] = nil
+	end
+
 	if t._click then
-		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
-		Events.register_click(t._click, t.props[2])
+		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
+		Events.register_click(t._click, t.props.name)
 	end
 
 	if t._value_changed then
-		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
-		Events.register_value_changed(t._value_changed, t.props[2])
+		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
+		Events.register_value_changed(t._value_changed, t.props.name)
 	end
 
 	if t._text_changed then
-		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
-		Events.register_text_changed(t._text_changed, t.props[2])
+		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
+		Events.register_text_changed(t._text_changed, t.props.name)
+	end
+
+	if t._for then
+		assert(t._for[1] and type(t._for[1]) == "string", "For blocks must have a declared dependency")
+		assert(t[1] and not t[2], "For blocks must have exactly one child")
+
+		Result.prop_fns[prop_func_id] = t[1].props
+		t[1].props = prop_func_id
+		prop_func_id = prop_func_id + 1
 	end
 
 	for _, value in pairs(t._effects or {}) do
@@ -196,12 +249,7 @@ m.register = function(t)
 	if type(t) ~= "table" then
 		return
 	end
-
-	if t._for then
-		register_for_block(t)
-	else
-		register_element(t)
-	end
+	register_element(t)
 end
 
 ---Returns the element saved as ref, if any
