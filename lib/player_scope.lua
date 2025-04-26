@@ -1,7 +1,8 @@
 local Proxy = require("lib/proxy")
 local m = {}
 
-m.default_player_scope = { controls_active = false, icon_num = 0 }
+local t = { "help" }
+m.default_player_scope = { controls_active = false, icon_num = 0, a = { b = t, c = t }, c = t }
 
 ---Run a function within a player's scope
 ---@param player_index number

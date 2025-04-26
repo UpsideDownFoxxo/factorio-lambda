@@ -1,4 +1,5 @@
 require("util")
+require("lib/interfaces")
 local Proxy = require("lib/proxy")
 local Builder = require("lib/ui_builder")
 local example = require("lib/ui_example")
@@ -10,8 +11,11 @@ script.on_init(function()
 	storage.reactive = {
 		refs = {},
 		proxy_cache = {},
+		proxy_id = 1,
 		player_scopes = {},
+		---@type table<string,table<EffectDescriptor,true>>
 		effects = {},
+		---@type table<number,EffectDescriptor[]>
 		effect_clean = {},
 	}
 
@@ -30,10 +34,3 @@ script.on_event(defines.events.on_player_created, function(event)
 
 	Builder.build(example, screen_element)
 end)
-
-remote.add_interface("reactive", {
-	flip = function(player_index)
-		storage.reactive.player_scopes[player_index].controls_active =
-			not storage.reactive.player_scopes[player_index].controls_active
-	end,
-})

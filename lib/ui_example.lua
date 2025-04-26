@@ -11,6 +11,7 @@ local item_sprites = {
 	"laser-turret",
 }
 
+---@type Element
 local example = {
 	props = { "frame", "ugg_main_frame", auto_center = true, direction = "vertical" },
 	_inlinestyle = { size = { 385, 165 } },
@@ -91,10 +92,8 @@ local example = {
 			props = { "frame", "button_frame", direction = "horizontal", style = "ugg_deep_frame" },
 			{
 				props = { "table", "button_table", column_count = #item_sprites, style = "filter_slot_table" },
-				-- {
-				-- 	_for = { "p.icons" },
-				-- 	{ type = "sprite-button", sprite = "item/sulfur", style = "slot_button" },
-				-- },
+				_for = { "p.icons" },
+				{ props = { "sprite-button", sprite = "item/sulfur", style = "slot_button" } },
 			},
 		},
 	},

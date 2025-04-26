@@ -11,7 +11,7 @@ local m = {}
 ---@param data table
 ---@return Proxy
 local function get_proxy(data)
-	return storage.reactive.proxy_cache[data] or m.wrap(data)
+	return storage.reactive.proxy_cache[data] or m.wrap_shallow(data)
 end
 
 ---Resolves a proxy to all possible paths
@@ -40,6 +40,9 @@ end
 local Proxy = {}
 
 Proxy.__index = function(table, key)
+	if type(table.__data) == "boolean" then
+		game.print("aua")
+	end
 	local value = table.__data[key]
 	if type(value) == "table" then
 		local proxy = get_proxy(value)
@@ -56,18 +59,27 @@ Proxy.__index = function(table, key)
 end
 
 Proxy.__newindex = function(table, key, value)
+	local old_value = table.__data[key]
+
 	-- table has been replaced, remove parent/child relationship
 	if type(table.__data[key]) == "table" then
 		local p = get_proxy(table.__data[key])
+		print(serpent.line(p.__parents))
 		p.__parents[table][key] = nil
 	end
 
 	if type(value) == "table" and value.__data then
+		---@cast value Proxy
 		-- if we are passed a proxy, add new parent and only save data
 		value.__parents[table][key] = true
 		table.__data[key] = value.__data
+	elseif type(value) == "table" then
+		-- other objects are assigned a new proxy
+		local p = get_proxy(value)
+		p.__parents[table] = p.__parents[table] or {}
+		p.__parents[table][key] = true
+		table.__data[key] = value
 	else
-		-- other objects are saved as-is
 		table.__data[key] = value
 	end
 
@@ -84,6 +96,13 @@ Proxy.__newindex = function(table, key, value)
 				storage.p = nil
 			end
 			if effect.self.valid then
+				if effect.fn == 1 then
+					---@diagnostic disable-next-line: inject-field
+					effect.old_table = old_value or {}
+
+					---@diagnostic disable-next-line: inject-field
+					effect.new_table = table.__data[key] or {}
+				end
 				Built.effect_fns[effect.fn](effect)
 			else
 				game.print("Encountered stale effect, ignoring")
@@ -118,17 +137,52 @@ end
 
 script.register_metatable("proxy_meta", Proxy)
 
----Wraps a table in a tracking proxy
+local function wrap_rec(parent_key, data, parent)
+	if type(data) ~= "table" then
+		return
+	end
+
+	local p = get_proxy(data)
+	p.__parents[parent] = p.__parents[parent] or {}
+	p.__parents[parent][parent_key] = true
+
+	for key, value in pairs(data) do
+		wrap_rec(key, value, p)
+	end
+end
+
+---Wraps a table and all its contents in tracking proxies
+m.wrap = function(data, root_name, owner)
+	local self = m.wrap_shallow(data, root_name, owner)
+
+	local proxy = setmetatable(self, Proxy)
+	storage.reactive.proxy_cache[data] = proxy
+
+	for key, value in pairs(data) do
+		wrap_rec(key, value, self)
+	end
+
+	return proxy
+end
+
+---Wraps a table in a tracking proxy. Allows setting root name and owner
 ---@generic T
 ---@param data T
 ---@return T
-m.wrap = function(data, root_name, owner)
+m.wrap_shallow = function(data, root_name, owner)
+	if type(data) ~= "table" then
+		game.print("aua")
+	end
 	local self = {
+		__id = storage.reactive.proxy_id,
 		__data = data,
 		__parents = {},
 		__root = root_name,
 		__owner = owner,
 	}
+
+	storage.reactive.proxy_id = storage.reactive.proxy_id + 1
+
 	local proxy = setmetatable(self, Proxy)
 	storage.reactive.proxy_cache[data] = proxy
 	return proxy

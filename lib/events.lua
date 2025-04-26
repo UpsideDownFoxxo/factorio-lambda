@@ -1,7 +1,6 @@
 script.on_event(defines.events.on_object_destroyed, function(e)
 	local effects = storage.reactive.effect_clean[e.registration_number]
 	if effects then
-		game.print("UI element with effects has committed die")
 		for _, effect in pairs(effects) do
 			for _, dep in pairs(effect.deps) do
 				storage.reactive.effects[dep][effect] = nil

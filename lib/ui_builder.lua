@@ -1,4 +1,5 @@
 local Result = require("lib/build_results")
+require("lib/internal_effects")
 local Events = require("lib/events")
 local PlayerScope = require("lib/player_scope")
 
@@ -27,7 +28,9 @@ local creation_vars = (function()
 	return tc
 end)()
 
-local function build_func(el, root, effects)
+local build_func
+
+local function build_element(el, root, effects)
 	local lua_el
 
 	local opts = {}
@@ -54,10 +57,28 @@ local function build_func(el, root, effects)
 		storage.reactive.refs[lua_el.player_index][el._ref] = lua_el
 	end
 
+	if el._for then
+		local id = script.register_on_object_destroyed(lua_el)
+
+		local dep = el._for[1]
+
+		---@type EffectDescriptor
+		local effect_descriptor = { fn = 1, self = lua_el, player_index = lua_el.player_index, deps = { el._for[1] } }
+
+		storage.reactive.effect_clean[id] = storage.reactive.effect_clean[id] or {}
+		table.insert(storage.reactive.effect_clean[id], effect_descriptor)
+
+		if not storage.reactive.effects[dep] then
+			storage.reactive.effects[dep] = {}
+		end
+		storage.reactive.effects[dep][effect_descriptor] = true
+
+		table.insert(effects, effect_descriptor)
+	end
+
 	if el.props.drag_target then
 		if type(el.props.drag_target) == "string" then
 			local t = m.ref(el.props.drag_target, { player_index = lua_el.player_index })
-			game.print("draggy")
 			lua_el.drag_target = t
 			el.props.drag_target = nil
 		else
@@ -95,33 +116,53 @@ local function build_func(el, root, effects)
 	for k, v in pairs(el) do
 		-- keys indexed with numbers are considered child elements
 		if type(k) == "number" then
-			m.build(v, lua_el)
+			build_func(v, lua_el, effects)
 		end
 	end
+	return lua_el
+end
+
+local function build_for_block(el, root, effects)
+	return build_func(el[1], root, effects)
+end
+
+build_func = function(el, root, effects)
+	return build_element(el, root, effects)
 end
 
 ---Mounts the UI element inside the markup to the root GUI element
 ---@param el any
 ---@param root LuaGuiElement
+---@return LuaGuiElement
 m.build = function(el, root)
+	local created
 	PlayerScope.run(root.player_index, function()
 		---@type {fn:number,self:LuaGuiElement}
 		local effects = {}
-		build_func(el, root, effects)
+		created = build_func(el, root, effects)
 
 		for _, f in pairs(effects) do
-			Result.effect_fns[f.fn](f)
+			if f.fn >= 1000 then
+				Result.effect_fns[f.fn](f)
+			end
 		end
 	end)
+
+	return created
 end
 
-local n = 1
--- (Re)-register non-serializable aspects of components.
-m.register = function(t)
-	if type(t) ~= "table" then
-		return
-	end
+--- Used to maintain references to functions across save/load cycles
+--- IDs below 1k are reserved for internal use
+local func_id = 1000
 
+local function register_for_block(t)
+	assert(t._for[1] and type(t._for[1]) == "string", "For blocks must have a declared dependency")
+	assert(t[1] and not t[2], "For blocks must have exactly one child")
+
+	m.register(t[1])
+end
+
+local function register_element(t)
 	if t._click then
 		assert(t.props[2] and type(t.props[2]) == "string", "Elements with events must have a name")
 		Events.register_click(t._click, t.props[2])
@@ -138,15 +179,28 @@ m.register = function(t)
 	end
 
 	for _, value in pairs(t._effects or {}) do
-		Result.effect_fns[n] = value[1]
-		value[1] = n
-		n = n + 1
+		Result.effect_fns[func_id] = value[1]
+		value[1] = func_id
+		func_id = func_id + 1
 	end
 
 	for k, v in pairs(t) do
 		if type(k) == "number" then
 			m.register(v)
 		end
+	end
+end
+
+-- (Re)-register non-serializable aspects of components.
+m.register = function(t)
+	if type(t) ~= "table" then
+		return
+	end
+
+	if t._for then
+		register_for_block(t)
+	else
+		register_element(t)
 	end
 end
 
