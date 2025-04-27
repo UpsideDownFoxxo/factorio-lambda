@@ -2,54 +2,9 @@ local Result = require("lib/build_results")
 local Events = require("lib/events")
 local PlayerScope = require("lib/player_scope")
 
+local creation_vars, ignore_vars = table.unpack(require("lib/special_vars"))
+
 local m = {}
-
-local creation_vars = (function()
-	local t = {
-		"type",
-		"name",
-		"caption",
-		"direction",
-		"value",
-		"minimum_value",
-		"maximum_value",
-		"numeric",
-		"allow_decimal",
-		"allow_negative",
-		"text",
-		"height",
-		"column_count",
-	}
-	local tc = {}
-	for _, v in pairs(t) do
-		tc[v] = true
-	end
-	return tc
-end)()
-
-local ignore_vars = (function()
-	local t = {
-		"type",
-		"name",
-		"caption",
-		"direction",
-		"value",
-		"minimum_value",
-		"maximum_value",
-		"numeric",
-		"allow_decimal",
-		"allow_negative",
-		"text",
-		"height",
-		"column_count",
-		"drag_target",
-	}
-	local tc = {}
-	for _, v in pairs(t) do
-		tc[v] = true
-	end
-	return tc
-end)()
 
 local function build_element(el, root, effects)
 	local lua_el
