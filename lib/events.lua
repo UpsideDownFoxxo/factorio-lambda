@@ -1,3 +1,5 @@
+local m = { events = {} }
+
 script.on_event(defines.events.on_object_destroyed, function(e)
 	local effects = storage.reactive.effect_clean[e.registration_number]
 	if effects then
@@ -6,19 +8,19 @@ script.on_event(defines.events.on_object_destroyed, function(e)
 				storage.reactive.effects[dep][effect] = nil
 			end
 		end
+		storage.reactive.effect_clean[e.registration_number] = nil
 	end
 end)
-
-local m = { events = {} }
 
 m.register_click = function(func, key)
 	if not m.events.click then
 		script.on_event(defines.events.on_gui_click, function(e)
 			local f = m.events.click[e.element.name]
 			if f then
+				local tmp = storage.p
 				storage.p = storage.reactive.player_scopes[e.player_index]
 				f(e)
-				storage.p = nil
+				storage.p = tmp
 			end
 		end)
 		m.events.click = {}
@@ -32,9 +34,10 @@ m.register_value_changed = function(func, key)
 		script.on_event(defines.events.on_gui_value_changed, function(e)
 			local f = m.events.value_changed[e.element.name]
 			if f then
+				local tmp = storage.p
 				storage.p = storage.reactive.player_scopes[e.player_index]
 				f(e)
-				storage.p = nil
+				storage.p = tmp
 			end
 		end)
 		m.events.value_changed = {}
@@ -48,9 +51,10 @@ m.register_text_changed = function(func, key)
 		script.on_event(defines.events.on_gui_text_changed, function(e)
 			local f = m.events.text_changed[e.element.name]
 			if f then
+				local tmp = storage.p
 				storage.p = storage.reactive.player_scopes[e.player_index]
 				f(e)
-				storage.p = nil
+				storage.p = tmp
 			end
 		end)
 		m.events.text_changed = {}

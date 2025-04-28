@@ -2,17 +2,13 @@ local Built = require("lib/build_results")
 
 local m = {}
 
----@class Proxy
----@field __data any
----@field __parents table<Proxy,table<string,boolean>>
----@field __root string|nil
----@field __owner number|nil
-
 ---@param data table
 ---@return Proxy
 local function get_proxy(data)
-	return storage.reactive.proxy_cache[data] or m.wrap_shallow(data)
+	return storage.reactive.proxy_cache[data] or m.wrap_raw(data)
 end
+
+-- TODO: How easy would it be to cache this?
 
 ---Resolves a proxy to all possible paths
 ---@param proxy Proxy
@@ -133,23 +129,23 @@ end
 
 script.register_metatable("proxy_meta", Proxy)
 
-local function wrap_rec(parent_key, data, parent)
-	if type(data) ~= "table" then
-		return
-	end
-
-	local p = get_proxy(data)
-	p.__parents[parent] = p.__parents[parent] or {}
-	p.__parents[parent][parent_key] = true
-
-	for key, value in pairs(data) do
-		wrap_rec(key, value, p)
-	end
-end
-
 ---Wraps a table and all its contents in tracking proxies
 m.wrap = function(data, root_name, owner)
-	local self = m.wrap_shallow(data, root_name, owner)
+	local function wrap_rec(parent_key, proxy_data, parent)
+		if type(proxy_data) ~= "table" then
+			return
+		end
+
+		local p = get_proxy(proxy_data)
+		p.__parents[parent] = p.__parents[parent] or {}
+		p.__parents[parent][parent_key] = true
+
+		for key, value in pairs(proxy_data) do
+			wrap_rec(key, value, p)
+		end
+	end
+
+	local self = m.wrap_raw(data, root_name, owner)
 
 	local proxy = setmetatable(self, Proxy)
 	storage.reactive.proxy_cache[data] = proxy
@@ -165,19 +161,22 @@ end
 ---@generic T
 ---@param data T
 ---@return T
-m.wrap_shallow = function(data, root_name, owner)
+m.wrap_raw = function(data, root_name, owner)
+	---@type Proxy
 	local self = {
 		__id = storage.reactive.proxy_id,
 		__data = data,
 		__parents = {},
-		__root = root_name,
-		__owner = owner,
+		__root = root_name or false,
+		__owner = owner or false,
 	}
-
 	storage.reactive.proxy_id = storage.reactive.proxy_id + 1
 
 	local proxy = setmetatable(self, Proxy)
+
+	assert(storage.reactive.proxy_cache[data] == nil, "Tried to create second proxy for an already proxied table")
 	storage.reactive.proxy_cache[data] = proxy
+
 	return proxy
 end
 

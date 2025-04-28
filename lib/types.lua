@@ -4,6 +4,13 @@
 ---@alias InlineStyle table
 ---@alias ForBlockMetadata {child_keys:table<any,LuaGuiElement>,markup:number}
 
+---@class Proxy
+---@field __id number
+---@field __data any
+---@field __parents table<Proxy,table<string,true>>
+---@field __root string|nil
+---@field __owner number|nil
+
 ---@class Element
 ---@field props Props|fun(e:any):Props
 ---@field _effects Effect[]|nil

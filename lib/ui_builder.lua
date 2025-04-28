@@ -4,15 +4,21 @@ local PlayerScope = require("lib/player_scope")
 
 local creation_vars, ignore_vars = table.unpack(require("lib/special_vars"))
 
+--- Used to maintain references to functions across save/load cycles
+--- IDs below 1k are reserved for internal use
+local func_id = 1000
+
 local m = {}
 
-local function build_element(el, root, effects)
+local function build_element(el, root, collected_effects)
 	local lua_el
 
 	local opts = {}
 
-	for k, _ in pairs(creation_vars) do
-		opts[k] = el.props[k]
+	for k, _ in pairs(el.props) do
+		if creation_vars[k] then
+			opts[k] = el.props[k]
+		end
 	end
 
 	---@type LuaGuiElement
@@ -24,9 +30,14 @@ local function build_element(el, root, effects)
 		lua_el.style[k] = v
 	end
 
+	local reactive = storage.reactive
+	local effects = reactive.effects
+	local effect_clean = reactive.effect_clean
+	local refs = reactive.refs
+
 	if el._ref then
-		storage.reactive.refs[lua_el.player_index] = storage.reactive.refs[lua_el.player_index] or {}
-		storage.reactive.refs[lua_el.player_index][el._ref] = lua_el
+		refs[lua_el.player_index] = refs[lua_el.player_index] or {}
+		refs[lua_el.player_index][el._ref] = lua_el
 	end
 
 	if el._for then
@@ -38,18 +49,18 @@ local function build_element(el, root, effects)
 		---@type EffectDescriptor
 		local effect_descriptor = { fn = 1, self = lua_el, player_index = lua_el.player_index, deps = { el._for[1] } }
 
-		storage.reactive.effect_clean[id] = storage.reactive.effect_clean[id] or {}
-		table.insert(storage.reactive.effect_clean[id], effect_descriptor)
+		effect_clean[id] = effect_clean[id] or {}
+		table.insert(effect_clean[id], effect_descriptor)
 
-		if not storage.reactive.effects[dep] then
-			storage.reactive.effects[dep] = {}
+		if not effects[dep] then
+			effects[dep] = {}
 		end
-		storage.reactive.effects[dep][effect_descriptor] = true
+		effects[dep][effect_descriptor] = true
 
-		table.insert(effects, effect_descriptor)
+		table.insert(collected_effects, effect_descriptor)
 
 		-- save for block data
-		storage.reactive.dynamic.for_blocks[lua_el] = { child_keys = {}, markup = el[1] }
+		reactive.dynamic.for_blocks[lua_el] = { child_keys = {}, markup = el[1] }
 	end
 
 	if el.props.drag_target then
@@ -75,16 +86,16 @@ local function build_element(el, root, effects)
 
 		local effect_descriptor = { fn = f, self = lua_el, player_index = lua_el.player_index, deps = deps }
 
-		storage.reactive.effect_clean[id] = storage.reactive.effect_clean[id] or {}
-		table.insert(storage.reactive.effect_clean[id], effect_descriptor)
+		effect_clean[id] = effect_clean[id] or {}
+		table.insert(effect_clean[id], effect_descriptor)
 
-		table.insert(effects, effect_descriptor)
+		table.insert(collected_effects, effect_descriptor)
 
 		for _, dep in pairs(deps) do
-			if not storage.reactive.effects[dep] then
-				storage.reactive.effects[dep] = {}
+			if not effects[dep] then
+				effects[dep] = {}
 			end
-			storage.reactive.effects[dep][effect_descriptor] = true
+			effects[dep][effect_descriptor] = true
 		end
 	end
 
@@ -92,7 +103,7 @@ local function build_element(el, root, effects)
 		for k, v in pairs(el) do
 			-- keys indexed with numbers are considered child elements
 			if type(k) == "number" then
-				build_element(v, lua_el, effects)
+				build_element(v, lua_el, collected_effects)
 			end
 		end
 	end
@@ -149,12 +160,11 @@ m.build_parametrized = function(el, root, params)
 	return created
 end
 
---- Used to maintain references to functions across save/load cycles
---- IDs below 1k are reserved for internal use
-local func_id = 1000
-local prop_func_id = 1
-
-local function register_element(t)
+-- (Re)-register non-serializable aspects of components.
+m.register = function(t)
+	if type(t) ~= "table" then
+		return
+	end
 	if type(t.props) == "table" then
 		t.props.type = t.props[1]
 		t.props.name = t.props[2]
@@ -181,9 +191,9 @@ local function register_element(t)
 		assert(t._for[1] and type(t._for[1]) == "string", "For blocks must have a declared dependency")
 		assert(t[1] and not t[2], "For blocks must have exactly one child")
 
-		Result.prop_fns[prop_func_id] = t[1].props
-		t[1].props = prop_func_id
-		prop_func_id = prop_func_id + 1
+		Result.prop_fns[func_id] = t[1].props
+		t[1].props = func_id
+		func_id = func_id + 1
 	end
 
 	for _, value in pairs(t._effects or {}) do
@@ -197,14 +207,6 @@ local function register_element(t)
 			m.register(v)
 		end
 	end
-end
-
--- (Re)-register non-serializable aspects of components.
-m.register = function(t)
-	if type(t) ~= "table" then
-		return
-	end
-	register_element(t)
 end
 
 ---Returns the element saved as ref, if any
