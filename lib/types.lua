@@ -34,7 +34,7 @@
 ---@field _text_changed function
 ---@field [number] AnyElement
 ---
----@alias ForClause { [1]: string, key: fun(a:any,b:any):boolean|nil }
+---@alias ForClause { [1]: string, key: fun(a:any):boolean|nil }
 
 ---@class ElementWithForClause
 ---@field props Props|fun(e:any):Props

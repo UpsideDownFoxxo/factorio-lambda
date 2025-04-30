@@ -6,7 +6,6 @@ local FunctionStore = require("lib/function_store")
 ---@param e ArrayReplacedDescriptor
 Built.fns.array_replaced = function(e)
 	local delta_in = {}
-	local delta_out = {}
 
 	local stayed = {}
 
