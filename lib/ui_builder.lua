@@ -1,14 +1,25 @@
-local Result = require("lib/build_results")
+local Build = require("lib/build_results")
 local Events = require("lib/events")
 local PlayerScope = require("lib/player_scope")
+local FunctionStore = require("lib/function_store")
+local utils = require("lib.utils")
 
 local creation_vars, ignore_vars = table.unpack(require("lib/special_vars"))
 
---- Used to maintain references to functions across save/load cycles
---- IDs below 1k are reserved for internal use
-local func_id = 1000
-
 local m = {}
+
+local function create_event_handler(lua_el, event, handler)
+	local reactive = storage.reactive
+	local cleanup = reactive.cleanup
+	local handlers = reactive.dynamic.handlers
+	handlers[event] = handlers[event] or {}
+
+	handlers[event][utils.get_ui_ident(lua_el)] = handler
+
+	local id = script.register_on_object_destroyed(lua_el)
+	cleanup[id] = cleanup[id] or {}
+	table.insert(cleanup[id], { fn = "cleanup_handler", self = utils.get_ui_ident(lua_el), event = event })
+end
 
 local function build_element(el, root, collected_effects)
 	local lua_el
@@ -32,12 +43,28 @@ local function build_element(el, root, collected_effects)
 
 	local reactive = storage.reactive
 	local effects = reactive.effects
-	local effect_clean = reactive.effect_clean
+	local cleanup = reactive.cleanup
 	local refs = reactive.refs
 
 	if el._ref then
 		refs[lua_el.player_index] = refs[lua_el.player_index] or {}
 		refs[lua_el.player_index][el._ref] = lua_el
+
+		local id = script.register_on_object_destroyed(lua_el)
+		cleanup[id] = cleanup[id] or {}
+		table.insert(cleanup[id], { fn = "cleanup_ref", player_index = lua_el.player_index, ref = el._ref })
+	end
+
+	if el._click then
+		create_event_handler(lua_el, defines.events.on_gui_click, el._click)
+	end
+
+	if el._value_changed then
+		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed)
+	end
+
+	if el._text_changed then
+		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed)
 	end
 
 	if el._for then
@@ -46,11 +73,9 @@ local function build_element(el, root, collected_effects)
 
 		local dep = el._for[1]
 
-		---@type EffectDescriptor
-		local effect_descriptor = { fn = 1, self = lua_el, player_index = lua_el.player_index, deps = { el._for[1] } }
-
-		effect_clean[id] = effect_clean[id] or {}
-		table.insert(effect_clean[id], effect_descriptor)
+		---@type ComponentFunctionDescriptor
+		local effect_descriptor =
+			{ fn = "array_replaced", self = lua_el, player_index = lua_el.player_index, deps = { el._for[1] } }
 
 		if not effects[dep] then
 			effects[dep] = {}
@@ -59,8 +84,12 @@ local function build_element(el, root, collected_effects)
 
 		table.insert(collected_effects, effect_descriptor)
 
+		local cleanup_descriptor = { fn = "cleanup_effect", deps = { el._for[1] }, key = effect_descriptor }
+		cleanup[id] = cleanup[id] or {}
+		table.insert(cleanup[id], cleanup_descriptor)
+
 		-- save for block data
-		reactive.dynamic.for_blocks[lua_el] = { child_keys = {}, markup = el[1] }
+		reactive.dynamic.for_blocks[utils.get_ui_ident(lua_el)] = { child_keys = {}, markup = el[1], key = el._for.key }
 	end
 
 	if el.props.drag_target then
@@ -82,13 +111,9 @@ local function build_element(el, root, collected_effects)
 
 	for _, effect in pairs(el._effects or {}) do
 		local f, deps = table.unpack(effect)
+
 		local id = script.register_on_object_destroyed(lua_el)
-
 		local effect_descriptor = { fn = f, self = lua_el, player_index = lua_el.player_index, deps = deps }
-
-		effect_clean[id] = effect_clean[id] or {}
-		table.insert(effect_clean[id], effect_descriptor)
-
 		table.insert(collected_effects, effect_descriptor)
 
 		for _, dep in pairs(deps) do
@@ -97,6 +122,10 @@ local function build_element(el, root, collected_effects)
 			end
 			effects[dep][effect_descriptor] = true
 		end
+
+		local cleanup_descriptor = { fn = "cleanup_effect", deps = deps, key = effect_descriptor }
+		cleanup[id] = cleanup[id] or {}
+		table.insert(cleanup[id], cleanup_descriptor)
 	end
 
 	if not el._for then
@@ -122,9 +151,7 @@ m.build = function(el, root)
 		created = build_element(el, root, effects)
 
 		for _, f in pairs(effects) do
-			if f.fn >= 1000 then
-				Result.effect_fns[f.fn](f)
-			end
+			FunctionStore.call(f.fn, { f })
 		end
 	end)
 
@@ -135,7 +162,7 @@ m.build_parametrized = function(el, root, params)
 	local el_c = table.deepcopy(el)
 
 	if type(el_c.props) == "number" then
-		el_c.props = Result.prop_fns[el_c.props](params)
+		el_c.props = FunctionStore.call(el_c.props, { params })
 	end
 	---@diagnostic disable-next-line: inject-field
 	el_c.props.type = el_c.props[1]
@@ -152,7 +179,7 @@ m.build_parametrized = function(el, root, params)
 
 		for _, f in pairs(effects) do
 			if f.fn >= 1000 then
-				Result.effect_fns[f.fn](f)
+				FunctionStore.call(f.fn, { f })
 			end
 		end
 	end)
@@ -173,33 +200,32 @@ m.register = function(t)
 	end
 
 	if t._click then
-		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
-		Events.register_click(t._click, t.props.name)
+		---@diagnostic disable-next-line: param-type-mismatch
+		t._click = Events.register_event_handler(defines.events.on_gui_click, t._click)
 	end
 
 	if t._value_changed then
-		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
-		Events.register_value_changed(t._value_changed, t.props.name)
+		---@diagnostic disable-next-line: param-type-mismatch
+		t._value_changed = Events.register_event_handler(defines.events.on_gui_value_changed, t._value_changed)
 	end
 
 	if t._text_changed then
-		assert(t.props.name and type(t.props.name) == "string", "Elements with events must have a name")
-		Events.register_text_changed(t._text_changed, t.props.name)
+		---@diagnostic disable-next-line: param-type-mismatch
+		t._text_changed = Events.register_event_handler(defines.events.on_gui_text_changed, t._text_changed)
 	end
 
 	if t._for then
 		assert(t._for[1] and type(t._for[1]) == "string", "For blocks must have a declared dependency")
 		assert(t[1] and not t[2], "For blocks must have exactly one child")
 
-		Result.prop_fns[func_id] = t[1].props
-		t[1].props = func_id
-		func_id = func_id + 1
+		t[1].props = FunctionStore.link(t[1].props)
+		if t._for.key then
+			t._for.key = FunctionStore.link(t._for.key)
+		end
 	end
 
 	for _, value in pairs(t._effects or {}) do
-		Result.effect_fns[func_id] = value[1]
-		value[1] = func_id
-		func_id = func_id + 1
+		value[1] = FunctionStore.link(value[1])
 	end
 
 	for k, v in pairs(t) do

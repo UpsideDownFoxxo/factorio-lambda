@@ -1,4 +1,5 @@
 local Built = require("lib/build_results")
+local FunctionStore = require("lib.function_store")
 
 local m = {}
 
@@ -88,14 +89,14 @@ Proxy.__newindex = function(table, key, value)
 				storage.p = nil
 			end
 			if effect.self.valid then
-				if effect.fn == 1 then
+				if effect.fn == "array_replaced" then
 					---@diagnostic disable-next-line: inject-field
 					effect.old_table = old_value or {}
 
 					---@diagnostic disable-next-line: inject-field
 					effect.new_table = table.__data[key] or {}
 				end
-				Built.effect_fns[effect.fn](effect)
+				FunctionStore.call(effect.fn, { effect })
 			else
 				game.print("Encountered stale effect, ignoring")
 			end
@@ -105,7 +106,6 @@ Proxy.__newindex = function(table, key, value)
 end
 
 Proxy.__pairs = function(table)
-	game.print("indexed table")
 	local function iterator(t, k)
 		local next_key, next_value = next(t, k)
 		if next_key == nil then

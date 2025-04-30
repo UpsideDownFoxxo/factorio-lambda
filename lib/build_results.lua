@@ -1,6 +1,5 @@
 local m = {
-	effect_fns = {},
-	---@type table<number,fun(e:any):Props>
-	prop_fns = {},
+	---@type table<number|string,fun(e:any)>
+	fns = {},
 }
 return m

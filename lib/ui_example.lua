@@ -56,7 +56,7 @@ local example = {
 
 						local t = {}
 						for i = 1, storage.p.icon_num do
-							table.insert(t, item_sprites[i])
+							table.insert(t, { sprite = item_sprites[i], toggled = false })
 						end
 						storage.p.icons = t
 					end,
@@ -76,7 +76,6 @@ local example = {
 				_ref = "slider",
 				_value_changed = function(e)
 					storage.p.icon_num = e.element.slider_value
-					game.print(e.element.slider_value)
 				end,
 			},
 			{
@@ -92,11 +91,34 @@ local example = {
 			props = { "frame", "button_frame", direction = "horizontal", style = "ugg_deep_frame" },
 			{
 				props = { "table", "button_table", column_count = #item_sprites, style = "filter_slot_table" },
-				_for = { "p.icons" },
-				{
-					props = function(str)
-						return { "sprite-button", "button_" .. str, sprite = "item/" .. str, style = "slot_button" }
+				_for = {
+					"p.icons",
+					key = function(a)
+						return a.sprite
 					end,
+				},
+				{
+					props = function(entry)
+						local str = entry.sprite
+						return {
+							"sprite-button",
+							"button_" .. str,
+							sprite = "item/" .. str,
+							style = "slot_button",
+							toggled = true,
+						}
+					end,
+					-- _click = function(e)
+					-- 	game.print("hi")
+					-- end,
+					-- _effects = {
+					-- 	{
+					-- 		function(e)
+					-- 			-- game.print(serpent.line(e))
+					-- 		end,
+					-- 		{ "p.icon_table.$a.toggled" },
+					-- 	},
+					-- },
 				},
 			},
 		},

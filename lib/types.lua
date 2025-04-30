@@ -1,8 +1,8 @@
----@alias EffectDescriptor {fn:number,self:LuaGuiElement,player_index:number,deps:string[]}
+---@alias ComponentFunctionDescriptor {fn:number|string,self:LuaGuiElement,player_index:number,deps:string[]}
 ---@alias Props {[1]:string,[2]:string|nil}
 ---@alias Effect {[1]:function,[2]:string[]}
 ---@alias InlineStyle table
----@alias ForBlockMetadata {child_keys:table<any,LuaGuiElement>,markup:number}
+---@alias ForBlockMetadata {child_keys:table<any,LuaGuiElement>,markup:number,key:number}
 
 ---@class Proxy
 ---@field __id number
@@ -33,7 +33,8 @@
 ---@field _effects Effect[]|nil
 ---@field _text_changed function
 ---@field [number] AnyElement
----@alias ForClause { [1]: string, key: string|nil }
+---
+---@alias ForClause { [1]: string, key: fun(a:any,b:any):boolean|nil }
 
 ---@class ElementWithForClause
 ---@field props Props|fun(e:any):Props

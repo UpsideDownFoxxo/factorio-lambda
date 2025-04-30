@@ -12,14 +12,19 @@ script.on_init(function()
 		refs = {},
 		proxy_cache = {},
 		proxy_id = 1,
+		mappings = {
+			reg_to_ui_idents = {},
+		},
 		player_scopes = {},
-		---@type table<string,table<EffectDescriptor,true>>
+		---@type table<string,table<ComponentFunctionDescriptor,true>>
 		effects = {},
-		---@type table<number,EffectDescriptor[]>
-		effect_clean = {},
+		---@type table<number,ComponentFunctionDescriptor[]>
+		cleanup = {},
 		dynamic = {
-			---@type table<LuaGuiElement,ForBlockMetadata>
+			---@type table<string,ForBlockMetadata>
 			for_blocks = {},
+			---@type table<any,table<string,number>>
+			handlers = {},
 		},
 	}
 end)
@@ -32,7 +37,5 @@ script.on_event(defines.events.on_player_created, function(event)
 
 	PlayerScope.add_player_scope(event.player_index)
 
-	local screen_element = player.gui.screen
-
-	Builder.build(example, screen_element)
+	Builder.build(example, player.gui.screen)
 end)
