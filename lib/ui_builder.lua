@@ -8,6 +8,13 @@ local creation_vars, ignore_vars = table.unpack(require("lib/special_vars"))
 
 local m = {}
 
+local function normalize_props(props)
+	props.type = props[1]
+	props.name = props[2]
+	props[1] = nil
+	props[2] = nil
+end
+
 local function create_event_handler(lua_el, event, handler)
 	local reactive = storage.reactive
 	local cleanup = reactive.cleanup
@@ -46,13 +53,13 @@ local function build_element(el, root, collected_effects)
 	local cleanup = reactive.cleanup
 	local refs = reactive.refs
 
-	if el._ref then
+	if el.props.name then
 		refs[lua_el.player_index] = refs[lua_el.player_index] or {}
-		refs[lua_el.player_index][el._ref] = lua_el
+		refs[lua_el.player_index][el.props.name] = lua_el
 
 		local id = script.register_on_object_destroyed(lua_el)
 		cleanup[id] = cleanup[id] or {}
-		table.insert(cleanup[id], { fn = "cleanup_ref", player_index = lua_el.player_index, ref = el._ref })
+		table.insert(cleanup[id], { fn = "cleanup_ref", player_index = lua_el.player_index, ref = el.props.name })
 	end
 
 	if el._click then
@@ -164,12 +171,7 @@ m.build_parametrized = function(el, root, params)
 	if type(el_c.props) == "number" then
 		el_c.props = FunctionStore.call(el_c.props, { params })
 	end
-	---@diagnostic disable-next-line: inject-field
-	el_c.props.type = el_c.props[1]
-	---@diagnostic disable-next-line: inject-field
-	el_c.props.name = el_c.props[2]
-	el_c.props[1] = nil
-	el_c.props[2] = nil
+	normalize_props(el_c.props)
 
 	local created
 	PlayerScope.run(root.player_index, function()
@@ -193,10 +195,7 @@ m.register = function(t)
 		return
 	end
 	if type(t.props) == "table" then
-		t.props.type = t.props[1]
-		t.props.name = t.props[2]
-		t.props[1] = nil
-		t.props[2] = nil
+		normalize_props(t.props)
 	end
 
 	if t._click then

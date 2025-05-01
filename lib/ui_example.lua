@@ -15,7 +15,6 @@ local item_sprites = {
 local example = {
 	props = { "frame", "ugg_main_frame", auto_center = true, direction = "vertical" },
 	_inlinestyle = { size = { 385, 165 } },
-	_ref = "frame",
 
 	{
 		props = { "flow", direction = "horizontal", style = "ugg_header_flow" },
@@ -23,13 +22,13 @@ local example = {
 			props = { "label", style = "ugg_header_title", caption = { "ugg.hello_world" } },
 		},
 		{
-			props = { "empty-widget", style = "ugg_draggable_header", drag_target = "frame" },
+			props = { "empty-widget", style = "ugg_draggable_header", drag_target = "ugg_main_frame" },
 		},
 
 		{
 			props = { "sprite-button", "close-button", sprite = "utility/close", style = "close_button" },
 			_click = function(e)
-				ref("frame", e).destroy()
+				ref("ugg_main_frame", e).destroy()
 			end,
 		},
 	},
@@ -41,18 +40,18 @@ local example = {
 			_effects = {
 				{
 					function(e)
-						ref("button", e).caption = storage.p.controls_active and { "ugg.deactivate" }
+						ref("ugg_controls_toggle", e).caption = storage.p.controls_active and { "ugg.deactivate" }
 							or { "ugg.activate" }
 
-						ref("slider", e).enabled = storage.p.controls_active or false
-						ref("textfield", e).enabled = storage.p.controls_active or false
+						ref("ugg_controls_slider", e).enabled = storage.p.controls_active or false
+						ref("ugg_controls_textfield", e).enabled = storage.p.controls_active or false
 					end,
 					{ "p.controls_active" },
 				},
 				{
 					function(e)
-						ref("textfield", e).text = tostring(storage.p.icon_num)
-						ref("slider", e).slider_value = storage.p.icon_num
+						ref("ugg_controls_textfield", e).text = tostring(storage.p.icon_num)
+						ref("ugg_controls_slider", e).slider_value = storage.p.icon_num
 
 						local t = {}
 						for i = 1, storage.p.icon_num do
@@ -65,7 +64,6 @@ local example = {
 			},
 			{
 				props = { "button", "ugg_controls_toggle", caption = { "ugg.deactivate" } },
-				_ref = "button",
 				_click = function()
 					storage.p.controls_active = not storage.p.controls_active
 				end,
@@ -73,7 +71,6 @@ local example = {
 			{
         --stylua: ignore
         props = {"slider","ugg_controls_slider",value=0,minimum_value=0,maximum_value=#item_sprites,style="notched_slider"},
-				_ref = "slider",
 				_value_changed = function(e)
 					storage.p.icon_num = e.element.slider_value
 				end,
@@ -81,7 +78,6 @@ local example = {
 			{
         --stylua: ignore
         props = {"textfield","ugg_controls_textfield",text="0",numeric=true,allow_decimal=false,allow_negative=false,style="ugg_controls_textfield"},
-				_ref = "textfield",
 				_text_changed = function(e)
 					storage.p.icon_num = tonumber(e.element.text) or 0
 				end,
@@ -108,17 +104,17 @@ local example = {
 							toggled = true,
 						}
 					end,
-					-- _click = function(e)
-					-- 	game.print("hi")
-					-- end,
-					-- _effects = {
-					-- 	{
-					-- 		function(e)
-					-- 			-- game.print(serpent.line(e))
-					-- 		end,
-					-- 		{ "p.icon_table.$a.toggled" },
-					-- 	},
-					-- },
+					_click = function(e)
+						game.print("hi")
+					end,
+					_effects = {
+						{
+							function(e)
+								-- game.print(serpent.line(e))
+							end,
+							{ "p.icon_table.$a.toggled" },
+						},
+					},
 				},
 			},
 		},
