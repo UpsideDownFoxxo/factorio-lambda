@@ -18,6 +18,23 @@ local example = {
 The first element of the table is used as the element type, the second (if specified) is used as the element name.
 All other keys inside `props` are applied to the component where appropriate, either during creation or directly after.
 
+## Refs
+A ref, short for reference, gives the component a name that can be used to obtain a reference to the underlying UI element inside functions.
+A component with a name is automatically entered into a player-specific referenced table, and a reference to the generated UI element can be obtained using the `ref` function.
+```lua
+local ref_el = {
+  props={"label","ref_label",caption = ""}
+}
+
+local ref_button = {
+  props = {"button", caption = "Click Me!"}
+  _click = function (e) 
+    -- ref returns the GUI element representing ref_el for the player index inside e
+    ref("ref-label",e).caption = "I am being referenced!"
+  end
+}
+```
+
 Additionally, a component may have the following top-level entries:
 
 ## Children
@@ -32,24 +49,6 @@ Currently implemented are:
 
 The event handler is a function taking in a single argument, the event data created by the observed interaction.
 The appropriate player data is mounted to `storage.p` and is accessible inside the handler.
-
-## _ref
-A ref, short for reference, gives the component a name that can be used to obtain a reference to the underlying UI element inside functions.
-```lua
-local ref_el = {
-  props={"label",caption = ""}
-  _ref = "ref-label"
-}
-
-local ref_button = {
-  props = {"button", caption = "Click Me!"}
-  _click = function (e) 
-    -- ref returns the GUI element representing ref_el for the player index inside e
-    ref("ref-label",e).caption = "I am being referenced!"
-  end
-}
-```
-This functionality may be replaced with component names in the future
 
 ## Effect
 Effects are functions that are automatically ran when the component they belong to is created or state their output depends on changes.
@@ -103,4 +102,5 @@ local buttons = {
 }
 ```
 > [!WARNING]
-> For Blocks currently do not work with effects. Event handlers work but have no idea what element they were called from. The engineers are working hard on a fix!
+> For Blocks currently do not work too well with effects. An extra `params` element is available on the table passed into effects and event handlers, which will hold the values of the element in the table they were constructed from. For now, these are **READ-ONLY** and should not be modified.
+> The engineers are working hard on a fix!

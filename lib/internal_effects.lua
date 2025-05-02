@@ -2,6 +2,7 @@ local Built = require("lib/build_results")
 local Builder = require("lib/ui_builder")
 local utils = require("lib.utils")
 local FunctionStore = require("lib/function_store")
+
 ---@alias ArrayReplacedDescriptor {self:LuaGuiElement,player_index:number,deps:string[],old_table:table,new_table:table}
 ---@param e ArrayReplacedDescriptor
 Built.fns.array_replaced = function(e)
@@ -36,7 +37,7 @@ Built.fns.array_replaced = function(e)
 	end
 
 	for _, value in pairs(delta_in) do
-		local el = Builder.build_parametrized(metadata.markup, e.self, value)
+		local el = Builder.build(metadata.markup, e.self, value)
 		metadata.child_keys[get_key(value)] = el
 	end
 end

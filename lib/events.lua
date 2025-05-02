@@ -17,14 +17,15 @@ end)
 m.register_event_handler = function(event, func)
 	local id = FunctionStore.link(func)
 	if not m.events[event] then
-		---@param e {player_index:number,element:LuaGuiElement}
+		---@param e {player_index:number,element:LuaGuiElement,params:any}
 		script.on_event(event, function(e)
 			local handler = (storage.reactive.dynamic.handlers[event] or {})[utils.get_ui_ident(e.element)]
 
 			if handler then
 				local tmp = storage.p
 				storage.p = storage.reactive.player_scopes[e.player_index]
-				FunctionStore.call(handler, { e })
+				e.params = handler.params
+				FunctionStore.call(handler.fn, { e })
 				storage.p = tmp
 			end
 		end)

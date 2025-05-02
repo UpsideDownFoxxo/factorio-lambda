@@ -11,6 +11,12 @@ local item_sprites = {
 	"laser-turret",
 }
 
+for k, v in pairs(item_sprites) do
+	---@type {sprite:string,toggled:boolean}
+	item_sprites[k] = { sprite = v, toggled = false }
+end
+---@cast item_sprites {sprite:string,toggled:boolean}
+
 ---@type Element
 local example = {
 	props = { "frame", "ugg_main_frame", auto_center = true, direction = "vertical" },
@@ -55,7 +61,7 @@ local example = {
 
 						local t = {}
 						for i = 1, storage.p.icon_num do
-							table.insert(t, { sprite = item_sprites[i], toggled = false })
+							t[item_sprites[i].sprite] = item_sprites[i]
 						end
 						storage.p.icons = t
 					end,
@@ -101,18 +107,20 @@ local example = {
 							"button_" .. str,
 							sprite = "item/" .. str,
 							style = "slot_button",
-							toggled = true,
+							toggled = entry.toggled,
 						}
 					end,
 					_click = function(e)
-						game.print("hi")
+						storage.p.icons[e.params.sprite].toggled = not storage.p.icons[e.params.sprite].toggled
 					end,
 					_effects = {
 						{
 							function(e)
-								-- game.print(serpent.line(e))
+								e.self.toggled = storage.p.icons[e.params.sprite].toggled
 							end,
-							{ "p.icon_table.$a.toggled" },
+							function(p)
+								return { "p.icons." .. p.sprite .. ".toggled" }
+							end,
 						},
 					},
 				},

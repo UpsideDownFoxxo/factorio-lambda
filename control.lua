@@ -23,7 +23,7 @@ script.on_init(function()
 		dynamic = {
 			---@type table<string,ForBlockMetadata>
 			for_blocks = {},
-			---@type table<any,table<string,number>>
+			---@type table<any,table<string,EventHandlerDescriptor>>
 			handlers = {},
 		},
 	}

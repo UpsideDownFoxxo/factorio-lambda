@@ -1,8 +1,9 @@
 ---@alias ComponentFunctionDescriptor {fn:number|string,self:LuaGuiElement,player_index:number,deps:string[]}
 ---@alias Props {[1]:string,[2]:string|nil}
----@alias Effect {[1]:function,[2]:string[]}
+---@alias Effect {[1]:function,[2]:string[]|fun(p:any):(string[])}
 ---@alias InlineStyle table
 ---@alias ForBlockMetadata {child_keys:table<any,LuaGuiElement>,markup:number,key:number}
+---@alias EventHandlerDescriptor {fn:number,params:any}
 
 ---@class Proxy
 ---@field __id number

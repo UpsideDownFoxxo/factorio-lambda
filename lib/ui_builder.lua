@@ -15,20 +15,31 @@ local function normalize_props(props)
 	props[2] = nil
 end
 
-local function create_event_handler(lua_el, event, handler)
+local function create_event_handler(lua_el, event, handler, params)
 	local reactive = storage.reactive
 	local cleanup = reactive.cleanup
 	local handlers = reactive.dynamic.handlers
 	handlers[event] = handlers[event] or {}
 
-	handlers[event][utils.get_ui_ident(lua_el)] = handler
+	local handler_descriptor = { fn = handler, params = params }
+	handlers[event][utils.get_ui_ident(lua_el)] = handler_descriptor
 
 	local id = script.register_on_object_destroyed(lua_el)
 	cleanup[id] = cleanup[id] or {}
 	table.insert(cleanup[id], { fn = "cleanup_handler", self = utils.get_ui_ident(lua_el), event = event })
 end
 
-local function build_element(el, root, collected_effects)
+local function build_element(el, root, collected_effects, params)
+	local copied = false
+	if type(el.props) == "number" then
+		if not copied then
+			el = utils.shallow_copy(el)
+			copied = true
+		end
+		el.props = FunctionStore.call(el.props, { params })
+		normalize_props(el.props)
+	end
+
 	local lua_el
 
 	local opts = {}
@@ -63,15 +74,15 @@ local function build_element(el, root, collected_effects)
 	end
 
 	if el._click then
-		create_event_handler(lua_el, defines.events.on_gui_click, el._click)
+		create_event_handler(lua_el, defines.events.on_gui_click, el._click, params)
 	end
 
 	if el._value_changed then
-		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed)
+		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed, params)
 	end
 
 	if el._text_changed then
-		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed)
+		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed, params)
 	end
 
 	if el._for then
@@ -119,8 +130,13 @@ local function build_element(el, root, collected_effects)
 	for _, effect in pairs(el._effects or {}) do
 		local f, deps = table.unpack(effect)
 
+		if type(deps) == "number" then
+			deps = FunctionStore.call(deps, { params })
+		end
+
 		local id = script.register_on_object_destroyed(lua_el)
-		local effect_descriptor = { fn = f, self = lua_el, player_index = lua_el.player_index, deps = deps }
+		local effect_descriptor =
+			{ fn = f, self = lua_el, player_index = lua_el.player_index, deps = deps, params = params }
 		table.insert(collected_effects, effect_descriptor)
 
 		for _, dep in pairs(deps) do
@@ -139,7 +155,7 @@ local function build_element(el, root, collected_effects)
 		for k, v in pairs(el) do
 			-- keys indexed with numbers are considered child elements
 			if type(k) == "number" then
-				build_element(v, lua_el, collected_effects)
+				build_element(v, lua_el, collected_effects, params)
 			end
 		end
 	end
@@ -150,39 +166,15 @@ end
 ---@param el any
 ---@param root LuaGuiElement
 ---@return LuaGuiElement
-m.build = function(el, root)
+m.build = function(el, root, params)
 	local created
 	PlayerScope.run(root.player_index, function()
 		---@type {fn:number,self:LuaGuiElement}
 		local effects = {}
-		created = build_element(el, root, effects)
+		created = build_element(el, root, effects, params)
 
 		for _, f in pairs(effects) do
 			FunctionStore.call(f.fn, { f })
-		end
-	end)
-
-	return created
-end
-
-m.build_parametrized = function(el, root, params)
-	local el_c = table.deepcopy(el)
-
-	if type(el_c.props) == "number" then
-		el_c.props = FunctionStore.call(el_c.props, { params })
-	end
-	normalize_props(el_c.props)
-
-	local created
-	PlayerScope.run(root.player_index, function()
-		---@type {fn:number,self:LuaGuiElement}
-		local effects = {}
-		created = build_element(el_c, root, effects)
-
-		for _, f in pairs(effects) do
-			if f.fn >= 1000 then
-				FunctionStore.call(f.fn, { f })
-			end
 		end
 	end)
 
@@ -225,6 +217,10 @@ m.register = function(t)
 
 	for _, value in pairs(t._effects or {}) do
 		value[1] = FunctionStore.link(value[1])
+
+		if type(value[2]) == "function" then
+			value[2] = FunctionStore.link(value[2])
+		end
 	end
 
 	for k, v in pairs(t) do
