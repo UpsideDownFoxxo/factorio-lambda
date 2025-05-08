@@ -111,12 +111,12 @@ local example = {
 						}
 					end,
 					_click = function(e)
-						storage.p.icons[e.params.sprite].toggled = not storage.p.icons[e.params.sprite].toggled
+						e.params.toggled = not e.params.toggled
 					end,
 					_effects = {
 						{
 							function(e)
-								e.self.toggled = storage.p.icons[e.params.sprite].toggled
+								e.self.toggled = e.params.toggled
 							end,
 							function(p)
 								return { "p.icons." .. p.sprite .. ".toggled" }

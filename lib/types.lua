@@ -2,7 +2,7 @@
 ---@alias Props {[1]:string,[2]:string|nil}
 ---@alias Effect {[1]:function,[2]:string[]|fun(p:any):(string[])}
 ---@alias InlineStyle table
----@alias ForBlockMetadata {child_keys:table<any,LuaGuiElement>,markup:number,key:number}
+---@alias ForBlockMetadata {children:table<any,{element:LuaGuiElement,effects:EventHandlerDescriptor[],handlers:EventHandlerDescriptor[]}>,markup:number,key:number}
 ---@alias EventHandlerDescriptor {fn:number,params:any}
 
 ---@class Proxy

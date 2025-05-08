@@ -1,5 +1,4 @@
-local Built = require("lib/build_results")
-local FunctionStore = require("lib.function_store")
+local FunctionStore = require("lib/function_store")
 
 local m = {}
 
@@ -77,6 +76,7 @@ Proxy.__newindex = function(table, key, value)
 	end
 
 	local paths = get_proxy_path(table)
+
 	for _, v in pairs(paths) do
 		local path = (v.path == "" and "" or (v.path .. ".")) .. key
 		local player = v.owner
@@ -94,7 +94,7 @@ Proxy.__newindex = function(table, key, value)
 					effect.old_table = old_value or {}
 
 					---@diagnostic disable-next-line: inject-field
-					effect.new_table = table.__data[key] or {}
+					effect.new_table = storage.reactive.proxy_cache[table.__data[key]] or {}
 				end
 				FunctionStore.call(effect.fn, { effect })
 			else
@@ -129,22 +129,22 @@ end
 
 script.register_metatable("proxy_meta", Proxy)
 
----Wraps a table and all its contents in tracking proxies
-m.wrap = function(data, root_name, owner)
-	local function wrap_rec(parent_key, proxy_data, parent)
-		if type(proxy_data) ~= "table" then
-			return
-		end
-
-		local p = get_proxy(proxy_data)
-		p.__parents[parent] = p.__parents[parent] or {}
-		p.__parents[parent][parent_key] = true
-
-		for key, value in pairs(proxy_data) do
-			wrap_rec(key, value, p)
-		end
+local function wrap_rec(parent_key, proxy_data, parent)
+	if type(proxy_data) ~= "table" then
+		return
 	end
 
+	local p = get_proxy(proxy_data)
+	p.__parents[parent] = p.__parents[parent] or {}
+	p.__parents[parent][parent_key] = true
+
+	for key, value in pairs(proxy_data) do
+		wrap_rec(key, value, p)
+	end
+end
+
+---Wraps a table and all its contents in tracking proxies
+m.wrap = function(data, root_name, owner)
 	local self = m.wrap_raw(data, root_name, owner)
 
 	local proxy = setmetatable(self, Proxy)

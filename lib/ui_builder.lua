@@ -15,7 +15,7 @@ local function normalize_props(props)
 	props[2] = nil
 end
 
-local function create_event_handler(lua_el, event, handler, params)
+local function create_event_handler(lua_el, event, handler, collected_handlers, params)
 	local reactive = storage.reactive
 	local cleanup = reactive.cleanup
 	local handlers = reactive.dynamic.handlers
@@ -27,9 +27,10 @@ local function create_event_handler(lua_el, event, handler, params)
 	local id = script.register_on_object_destroyed(lua_el)
 	cleanup[id] = cleanup[id] or {}
 	table.insert(cleanup[id], { fn = "cleanup_handler", self = utils.get_ui_ident(lua_el), event = event })
+	table.insert(collected_handlers, handler_descriptor)
 end
 
-local function build_element(el, root, collected_effects, params)
+local function build_element(el, root, collected_effects, collected_handlers, params)
 	local copied = false
 	if type(el.props) == "number" then
 		if not copied then
@@ -74,15 +75,15 @@ local function build_element(el, root, collected_effects, params)
 	end
 
 	if el._click then
-		create_event_handler(lua_el, defines.events.on_gui_click, el._click, params)
+		create_event_handler(lua_el, defines.events.on_gui_click, el._click, collected_handlers, params)
 	end
 
 	if el._value_changed then
-		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed, params)
+		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed, collected_handlers, params)
 	end
 
 	if el._text_changed then
-		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed, params)
+		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed, collected_handlers, params)
 	end
 
 	if el._for then
@@ -107,7 +108,7 @@ local function build_element(el, root, collected_effects, params)
 		table.insert(cleanup[id], cleanup_descriptor)
 
 		-- save for block data
-		reactive.dynamic.for_blocks[utils.get_ui_ident(lua_el)] = { child_keys = {}, markup = el[1], key = el._for.key }
+		reactive.dynamic.for_blocks[utils.get_ui_ident(lua_el)] = { children = {}, markup = el[1], key = el._for.key }
 	end
 
 	if el.props.drag_target then
@@ -155,7 +156,7 @@ local function build_element(el, root, collected_effects, params)
 		for k, v in pairs(el) do
 			-- keys indexed with numbers are considered child elements
 			if type(k) == "number" then
-				build_element(v, lua_el, collected_effects, params)
+				build_element(v, lua_el, collected_effects, collected_handlers, params)
 			end
 		end
 	end
@@ -165,20 +166,21 @@ end
 ---Mounts the UI element inside the markup to the root GUI element
 ---@param el any
 ---@param root LuaGuiElement
----@return LuaGuiElement
+---@return LuaGuiElement, ComponentFunctionDescriptor[],EventHandlerDescriptor[]
 m.build = function(el, root, params)
 	local created
+	local effects = {}
+	local handlers = {}
 	PlayerScope.run(root.player_index, function()
 		---@type {fn:number,self:LuaGuiElement}
-		local effects = {}
-		created = build_element(el, root, effects, params)
+		created = build_element(el, root, effects, handlers, params)
 
 		for _, f in pairs(effects) do
 			FunctionStore.call(f.fn, { f })
 		end
 	end)
 
-	return created
+	return created, effects, handlers
 end
 
 -- (Re)-register non-serializable aspects of components.

@@ -102,5 +102,4 @@ local buttons = {
 }
 ```
 > [!WARNING]
-> For Blocks currently do not work too well with effects. An extra `params` element is available on the table passed into effects and event handlers, which will hold the values of the element in the table they were constructed from. For now, these are **READ-ONLY** and should not be modified.
-> The engineers are working hard on a fix!
+> For Blocks currently do not work too well with effects. An extra `params` element is available on the table passed into effects and event handlers, which will hold the values of the element in the table they were constructed from. This may change in the future
