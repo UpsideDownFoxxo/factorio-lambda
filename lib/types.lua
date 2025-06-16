@@ -4,6 +4,15 @@
 ---@alias InlineStyle table
 ---@alias ForBlockMetadata {children:table<any,{element:LuaGuiElement,effects:EventHandlerDescriptor[],handlers:EventHandlerDescriptor[]}>,markup:number,key:number}
 ---@alias EventHandlerDescriptor {fn:number,params:any}
+---
+---@type number
+local a = 1
+---@type table
+local b = {}
+
+if a == b then
+	a = 0
+end
 
 ---@class Proxy
 ---@field __id number

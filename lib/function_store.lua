@@ -1,4 +1,4 @@
-local Build = require("lib/build_results")
+local Build = require("__reactive-gui__/lib/build_results")
 local m = {}
 
 --- Used to maintain references to functions across save/load cycles

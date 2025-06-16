@@ -1,10 +1,10 @@
-local Build = require("lib/build_results")
-local Events = require("lib/events")
-local PlayerScope = require("lib/player_scope")
-local FunctionStore = require("lib/function_store")
-local utils = require("lib.utils")
+local Build = require("__reactive-gui__/lib/build_results")
+local Events = require("__reactive-gui__/lib/events")
+local PlayerScope = require("__reactive-gui__/lib/player_scope")
+local FunctionStore = require("__reactive-gui__/lib/function_store")
+local utils = require("__reactive-gui__/lib/utils")
 
-local creation_vars, ignore_vars = table.unpack(require("lib/special_vars"))
+local creation_vars, ignore_vars = table.unpack(require("__reactive-gui__/lib/special_vars"))
 
 local m = {}
 

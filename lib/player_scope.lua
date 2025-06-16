@@ -1,4 +1,4 @@
-local Proxy = require("lib/proxy")
+local Proxy = require("__reactive-gui__/lib/proxy")
 local m = {}
 
 local t = { "help" }

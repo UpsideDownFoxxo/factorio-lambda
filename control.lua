@@ -1,9 +1,9 @@
 require("util")
-require("lib/interfaces")
-require("lib/internal_effects")
-local Builder = require("lib/ui_builder")
-local example = require("lib/ui_example")
-local PlayerScope = require("lib/player_scope")
+require("__reactive-gui__/lib/interfaces")
+require("__reactive-gui__/lib/internal_effects")
+local Builder = require("__reactive-gui__/lib/ui_builder")
+local example = require("__reactive-gui__/lib/ui_example")
+local PlayerScope = require("__reactive-gui__/lib/player_scope")
 
 Builder.register(example)
 

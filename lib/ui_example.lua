@@ -1,4 +1,4 @@
-local ref = require("lib/ui_builder").ref
+local ref = require("__reactive-gui__/lib/ui_builder").ref
 
 local item_sprites = {
 	"inserter",

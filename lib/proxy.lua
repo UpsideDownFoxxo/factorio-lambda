@@ -1,4 +1,4 @@
-local FunctionStore = require("lib/function_store")
+local FunctionStore = require("__reactive-gui__/lib/function_store")
 
 local m = {}
 

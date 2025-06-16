@@ -1,7 +1,7 @@
-local Built = require("lib/build_results")
-local Builder = require("lib/ui_builder")
-local utils = require("lib.utils")
-local FunctionStore = require("lib/function_store")
+local Built = require("__reactive-gui__/lib/build_results")
+local Builder = require("__reactive-gui__/lib/ui_builder")
+local utils = require("__reactive-gui__/lib/utils")
+local FunctionStore = require("__reactive-gui__/lib/function_store")
 
 ---@alias ArrayReplacedDescriptor {self:LuaGuiElement,player_index:number,deps:string[],old_table:table,new_table:table}
 
