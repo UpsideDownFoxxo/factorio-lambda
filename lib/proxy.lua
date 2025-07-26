@@ -168,6 +168,14 @@ ProxyMT.__pairs = function(table)
 	return iterator, table.__data, nil
 end
 
+-- track proxy deletion if requested
+if storage.ACTIVE_PROXIES then
+	ProxyMT.__gc = function(table)
+		game.print("Collected table " .. table.__id)
+		storage.ACTIVE_PROXIES[table.__id] = nil
+	end
+end
+
 script.register_metatable("proxy_meta", ProxyMT)
 
 local function wrap_rec(parent_key, proxy_data, parent)
@@ -213,6 +221,11 @@ m.wrap_raw = function(data, root_name, owner)
 	local proxy = setmetatable(self, ProxyMT)
 
 	assert(storage.reactive.proxy_cache[data] == nil, "Tried to create second proxy for an already proxied table")
+
+	if storage.ACTIVE_PROXIES then
+		storage.ACTIVE_PROXIES[proxy.__id] = debug.traceback("Allocated in: ")
+	end
+
 	storage.reactive.proxy_cache[data] = proxy
 
 	return proxy

@@ -1,3 +1,7 @@
+-- Uncomment if you want to debug proxy leaks.
+-- Probably breaks multiplayer
+-- storage.ACTIVE_PROXIES = {}
+
 require("util")
 require("__reactive-gui__/lib/interfaces")
 require("__reactive-gui__/lib/internal_effects")

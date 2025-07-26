@@ -55,4 +55,34 @@ remote.add_interface("reactive", {
 		print(nodes)
 		print(edges)
 	end,
+
+	run_proxy_sanitizer = function()
+		if not storage.ACTIVE_PROXIES then
+			game.print(
+				"Cannot run sanitizer, proxy tracking is disabled!\n"
+					.. "Tracking proxies is disabled by default since it breaks multiplayer. Enable it in the settings"
+			)
+		end
+		-- just in case
+		collectgarbage("collect")
+		local active_proxies = table.deepcopy(storage.ACTIVE_PROXIES)
+
+		-- ignore all proxies that are still in the cache. We have other tools to debug these
+		for _, v in pairs(storage.reactive.proxy_cache) do
+			active_proxies[v.__id] = nil
+		end
+
+		local leaked = 0
+
+		for key, value in pairs(active_proxies) do
+			game.print("Proxy with ID " .. key .. " is no longer active, but was not collected\n" .. value)
+			leaked = leaked + 1
+		end
+
+		if leaked == 0 then
+			game.print("No proxy leaks detected. Good job!")
+		else
+			game.print("Detected " .. leaked .. " proxy leaks. :(")
+		end
+	end,
 })
