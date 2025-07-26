@@ -1,3 +1,4 @@
+---@module "lib/build_results"
 local Build = require("__reactive-gui__/lib/build_results")
 local m = {}
 
@@ -5,6 +6,7 @@ local m = {}
 --- IDs below 1k are reserved for internal use
 local func_id = 1000
 
+--- Alias this function, allowing it to be "saved" across save/load cycles. use `call()` to call it
 m.link = function(f)
 	assert(not game, "Linked functions should only be registered during startup")
 	Build.fns[func_id] = f

@@ -1,4 +1,6 @@
-local ref = require("__reactive-gui__/lib/ui_builder").ref
+---@module "lib/ui_builder"
+local Builder = require("__reactive-gui__/lib/ui_builder")
+local ref = Builder.ref
 
 local item_sprites = {
 	"inserter",
@@ -15,6 +17,7 @@ for k, v in pairs(item_sprites) do
 	---@type {sprite:string,toggled:boolean}
 	item_sprites[k] = { sprite = v, toggled = false }
 end
+
 ---@cast item_sprites {sprite:string,toggled:boolean}
 
 ---@type Element

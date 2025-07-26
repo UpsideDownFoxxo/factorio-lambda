@@ -1,10 +1,15 @@
-local Build = require("__reactive-gui__/lib/build_results")
+---@module "lib/events"
 local Events = require("__reactive-gui__/lib/events")
+---@module "lib/player_scope"
 local PlayerScope = require("__reactive-gui__/lib/player_scope")
+---@module "lib/function_store"
 local FunctionStore = require("__reactive-gui__/lib/function_store")
+---@module "lib/utils"
 local utils = require("__reactive-gui__/lib/utils")
 
-local creation_vars, ignore_vars = table.unpack(require("__reactive-gui__/lib/special_vars"))
+---@module "lib/special_vars"
+local special_vars = require("__reactive-gui__/lib/special_vars")
+local creation_vars, ignore_vars = table.unpack(special_vars)
 
 local m = {}
 
@@ -15,13 +20,14 @@ local function normalize_props(props)
 	props[2] = nil
 end
 
-local function create_event_handler(lua_el, event, handler, collected_handlers, params)
+local function create_event_handler(lua_el, event, handler_fn, collected_handlers, params)
 	local reactive = storage.reactive
 	local cleanup = reactive.cleanup
 	local handlers = reactive.dynamic.handlers
+
 	handlers[event] = handlers[event] or {}
 
-	local handler_descriptor = { fn = handler, params = params }
+	local handler_descriptor = { fn = handler_fn, params = params }
 	handlers[event][utils.get_ui_ident(lua_el)] = handler_descriptor
 
 	local id = script.register_on_object_destroyed(lua_el)
@@ -30,8 +36,16 @@ local function create_event_handler(lua_el, event, handler, collected_handlers, 
 	table.insert(collected_handlers, handler_descriptor)
 end
 
+---comment
+---@param el any
+---@param root LuaGuiElement
+---@param collected_effects any
+---@param collected_handlers any
+---@param params table
+---@return LuaGuiElement
 local function build_element(el, root, collected_effects, collected_handlers, params)
 	local copied = false
+	-- Props may be dynamic, generate them with parameters
 	if type(el.props) == "number" then
 		if not copied then
 			el = utils.shallow_copy(el)
@@ -92,22 +106,24 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 
 		local dep = el._for[1]
 
+		-- Replacing the entire table is an action on the parent, so we have to start tracking it here
 		---@type ComponentFunctionDescriptor
-		local effect_descriptor =
-			{ fn = "array_replaced", self = lua_el, player_index = lua_el.player_index, deps = { el._for[1] } }
+		local replaced_descriptor =
+			{ fn = "array_replaced", self = lua_el, player_index = lua_el.player_index, deps = { dep } }
 
 		if not effects[dep] then
 			effects[dep] = {}
 		end
-		effects[dep][effect_descriptor] = true
 
-		table.insert(collected_effects, effect_descriptor)
+		effects[dep][replaced_descriptor] = true
 
-		local cleanup_descriptor = { fn = "cleanup_effect", deps = { el._for[1] }, key = effect_descriptor }
+		table.insert(collected_effects, replaced_descriptor)
+
+		local cleanup_descriptor = { fn = "cleanup_effect", deps = { dep }, key = replaced_descriptor }
 		cleanup[id] = cleanup[id] or {}
 		table.insert(cleanup[id], cleanup_descriptor)
 
-		-- save for block data
+		-- save for_block data
 		reactive.dynamic.for_blocks[utils.get_ui_ident(lua_el)] = { children = {}, markup = el[1], key = el._for.key }
 	end
 
@@ -220,11 +236,13 @@ m.register = function(t)
 	for _, value in pairs(t._effects or {}) do
 		value[1] = FunctionStore.link(value[1])
 
+		-- dependency might be dynamic
 		if type(value[2]) == "function" then
 			value[2] = FunctionStore.link(value[2])
 		end
 	end
 
+	-- recursively register children
 	for k, v in pairs(t) do
 		if type(k) == "number" then
 			m.register(v)

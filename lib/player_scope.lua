@@ -1,3 +1,4 @@
+---@module "lib/proxy"
 local Proxy = require("__reactive-gui__/lib/proxy")
 local m = {}
 

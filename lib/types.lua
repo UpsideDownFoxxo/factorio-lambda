@@ -4,15 +4,6 @@
 ---@alias InlineStyle table
 ---@alias ForBlockMetadata {children:table<any,{element:LuaGuiElement,effects:EventHandlerDescriptor[],handlers:EventHandlerDescriptor[]}>,markup:number,key:number}
 ---@alias EventHandlerDescriptor {fn:number,params:any}
----
----@type number
-local a = 1
----@type table
-local b = {}
-
-if a == b then
-	a = 0
-end
 
 ---@class Proxy
 ---@field __id number
@@ -24,6 +15,12 @@ end
 ---@class Element
 ---@field props Props|fun(e:any):Props
 ---@field _effects Effect[]|nil
+---@field [number] AnyElement
+---
+---@class SerializableElement
+---@field props Props|number
+---@field _effects Effect[]|nil
+---@field _inlinestyle InlineStyle|nil
 ---@field [number] AnyElement
 
 ---@class Button

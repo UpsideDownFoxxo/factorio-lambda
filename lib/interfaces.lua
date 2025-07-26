@@ -1,14 +1,19 @@
 remote.add_interface("reactive", {
+	--- Used to test reactive updates from outside the UI
 	flip = function(player_index)
 		storage.reactive.player_scopes[player_index].controls_active =
 			not storage.reactive.player_scopes[player_index].controls_active
 	end,
 
+	--- Debug prody relations
 	print_proxy_relations = function()
 		local nodes = ""
 		local edges = ""
 
+		local proxy_count = 0
+
 		for _, proxy in pairs(storage.reactive.proxy_cache) do
+			proxy_count = proxy_count + 1
 			local data_string = ""
 
 			for k, v in pairs(proxy.__data) do
@@ -40,10 +45,12 @@ remote.add_interface("reactive", {
 		for _, proxy in pairs(storage.reactive.proxy_cache) do
 			for table, keys in pairs(proxy.__parents) do
 				for key, _ in pairs(keys) do
-					edges = edges .. table.__id .. ":" .. key .. "->" .. proxy.__id .. "\n"
+					edges = edges .. table.__id .. ":" .. '"' .. key .. '"' .. "->" .. proxy.__id .. "\n"
 				end
 			end
 		end
+
+		game.print("Dumped data for " .. proxy_count .. " proxies")
 
 		print(nodes)
 		print(edges)

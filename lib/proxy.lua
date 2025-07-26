@@ -1,11 +1,41 @@
+---@module "lib/function_store"
 local FunctionStore = require("__reactive-gui__/lib/function_store")
 
 local m = {}
 
 ---@param data table
 ---@return Proxy
-local function get_proxy(data)
-	return storage.reactive.proxy_cache[data] or m.wrap_raw(data)
+local function get_or_make_proxy(data)
+	return storage.reactive.proxy_cache[data] or m.wrap(data)
+end
+
+---Attempts to clean up a proxy if it has no parents
+---@param proxy Proxy
+local function try_delete_proxy(proxy)
+	if proxy.__root then
+		return
+	end
+
+	if next(proxy.__parents) ~= nil then
+		return
+	end
+
+	storage.reactive.proxy_cache[proxy.__data] = nil
+	for key, value in pairs(proxy.__data) do
+		if type(value) ~= "table" then
+			goto continue
+		end
+
+		local p = get_or_make_proxy(value)
+		p.__parents[proxy][key] = nil
+
+		if next(p.__parents[proxy]) == nil then
+			p.__parents[proxy] = nil
+
+			try_delete_proxy(p)
+		end
+		::continue::
+	end
 end
 
 -- TODO: How easy would it be to cache this?
@@ -33,12 +63,15 @@ local function get_proxy_path(proxy)
 	return results
 end
 
-local Proxy = {}
+--- MT for table to track changes to its contents
+local ProxyMT = {}
 
-Proxy.__index = function(table, key)
+-- get
+ProxyMT.__index = function(table, key)
+	-- proxies are deeply reactive, so we have to switch out the actual contents for a proxy as well
 	local value = table.__data[key]
 	if type(value) == "table" then
-		local proxy = get_proxy(value)
+		local proxy = get_or_make_proxy(value)
 
 		if not proxy.__parents[table] then
 			proxy.__parents[table] = { [key] = true }
@@ -51,31 +84,38 @@ Proxy.__index = function(table, key)
 	return value
 end
 
-Proxy.__newindex = function(table, key, value)
-	local old_value = table.__data[key]
+-- set
+ProxyMT.__newindex = function(self, key, value)
+	local old_value = self.__data[key]
 
 	-- table has been replaced, remove parent/child relationship
-	if type(table.__data[key]) == "table" then
-		local p = get_proxy(table.__data[key])
-		p.__parents[table][key] = nil
+	if type(self.__data[key]) == "table" then
+		local p = get_or_make_proxy(self.__data[key])
+		p.__parents[self][key] = nil
+
+		if next(p.__parents[self]) == nil then
+			p.__parents[self] = nil
+
+			try_delete_proxy(p)
+		end
 	end
 
 	if type(value) == "table" and value.__data then
 		---@cast value Proxy
 		-- if we are passed a proxy, add new parent and only save data
-		value.__parents[table][key] = true
-		table.__data[key] = value.__data
+		value.__parents[self][key] = true
+		self.__data[key] = value.__data
 	elseif type(value) == "table" then
 		-- other objects are assigned a new proxy
-		local p = get_proxy(value)
-		p.__parents[table] = p.__parents[table] or {}
-		p.__parents[table][key] = true
-		table.__data[key] = value
+		local p = get_or_make_proxy(value)
+		p.__parents[self] = p.__parents[self] or {}
+		p.__parents[self][key] = true
+		self.__data[key] = value
 	else
-		table.__data[key] = value
+		self.__data[key] = value
 	end
 
-	local paths = get_proxy_path(table)
+	local paths = get_proxy_path(self)
 
 	for _, v in pairs(paths) do
 		local path = (v.path == "" and "" or (v.path .. ".")) .. key
@@ -94,7 +134,7 @@ Proxy.__newindex = function(table, key, value)
 					effect.old_table = old_value or {}
 
 					---@diagnostic disable-next-line: inject-field
-					effect.new_table = storage.reactive.proxy_cache[table.__data[key]] or {}
+					effect.new_table = storage.reactive.proxy_cache[self.__data[key]] or {}
 				end
 				FunctionStore.call(effect.fn, { effect })
 			else
@@ -105,7 +145,8 @@ Proxy.__newindex = function(table, key, value)
 	end
 end
 
-Proxy.__pairs = function(table)
+-- iteration
+ProxyMT.__pairs = function(table)
 	local function iterator(t, k)
 		local next_key, next_value = next(t, k)
 		if next_key == nil then
@@ -114,7 +155,7 @@ Proxy.__pairs = function(table)
 
 		-- we want deep reactivity for nested objects
 		if type(next_value) == "table" then
-			next_value = get_proxy(next_value)
+			next_value = get_or_make_proxy(next_value)
 
 			if not next_value.__parents[table] then
 				next_value.__parents[table] = { [next_key] = true }
@@ -127,14 +168,14 @@ Proxy.__pairs = function(table)
 	return iterator, table.__data, nil
 end
 
-script.register_metatable("proxy_meta", Proxy)
+script.register_metatable("proxy_meta", ProxyMT)
 
 local function wrap_rec(parent_key, proxy_data, parent)
 	if type(proxy_data) ~= "table" then
 		return
 	end
 
-	local p = get_proxy(proxy_data)
+	local p = get_or_make_proxy(proxy_data)
 	p.__parents[parent] = p.__parents[parent] or {}
 	p.__parents[parent][parent_key] = true
 
@@ -145,13 +186,10 @@ end
 
 ---Wraps a table and all its contents in tracking proxies
 m.wrap = function(data, root_name, owner)
-	local self = m.wrap_raw(data, root_name, owner)
-
-	local proxy = setmetatable(self, Proxy)
-	storage.reactive.proxy_cache[data] = proxy
+	local proxy = m.wrap_raw(data, root_name, owner)
 
 	for key, value in pairs(data) do
-		wrap_rec(key, value, self)
+		wrap_rec(key, value, proxy)
 	end
 
 	return proxy
@@ -172,7 +210,7 @@ m.wrap_raw = function(data, root_name, owner)
 	}
 	storage.reactive.proxy_id = storage.reactive.proxy_id + 1
 
-	local proxy = setmetatable(self, Proxy)
+	local proxy = setmetatable(self, ProxyMT)
 
 	assert(storage.reactive.proxy_cache[data] == nil, "Tried to create second proxy for an already proxied table")
 	storage.reactive.proxy_cache[data] = proxy

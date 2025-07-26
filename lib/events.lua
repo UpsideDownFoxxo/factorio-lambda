@@ -1,4 +1,6 @@
+---@module "lib/function_store"
 local FunctionStore = require("__reactive-gui__/lib/function_store")
+---@module "lib/utils"
 local utils = require("__reactive-gui__/lib/utils")
 local m = { events = {} }
 
@@ -12,6 +14,8 @@ script.on_event(defines.events.on_object_destroyed, function(e)
 	end
 end)
 
+---Adds `func` to be run once `event` occurs. Works with all UI events that contain the `element` field
+--- WARN: Calling script.on_event on these events will break the framework in a major way
 ---@param func function
 ---@return integer
 m.register_event_handler = function(event, func)
