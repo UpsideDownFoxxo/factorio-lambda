@@ -1,14 +1,14 @@
 ---@module "lib/events"
-local Events = require("__reactive-gui__/lib/events")
+local Events = require("__lambda-ui__/lib/events")
 ---@module "lib/player_scope"
-local PlayerScope = require("__reactive-gui__/lib/player_scope")
+local PlayerScope = require("__lambda-ui__/lib/player_scope")
 ---@module "lib/function_store"
-local FunctionStore = require("__reactive-gui__/lib/function_store")
+local FunctionStore = require("__lambda-ui__/lib/function_store")
 ---@module "lib/utils"
-local utils = require("__reactive-gui__/lib/utils")
+local utils = require("__lambda-ui__/lib/utils")
 
 ---@module "lib/special_vars"
-local special_vars = require("__reactive-gui__/lib/special_vars")
+local special_vars = require("__lambda-ui__/lib/special_vars")
 local creation_vars, ignore_vars = table.unpack(special_vars)
 
 local m = {}

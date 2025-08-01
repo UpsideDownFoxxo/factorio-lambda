@@ -1,7 +1,7 @@
 ---@module "lib/function_store"
-local FunctionStore = require("__reactive-gui__/lib/function_store")
+local FunctionStore = require("__lambda-ui__/lib/function_store")
 ---@module "lib/utils"
-local utils = require("__reactive-gui__/lib/utils")
+local utils = require("__lambda-ui__/lib/utils")
 local m = { events = {} }
 
 script.on_event(defines.events.on_object_destroyed, function(e)

@@ -3,11 +3,11 @@
 -- storage.ACTIVE_PROXIES = {}
 
 require("util")
-require("__reactive-gui__/lib/interfaces")
-require("__reactive-gui__/lib/internal_effects")
-local Builder = require("__reactive-gui__/lib/ui_builder")
-local example = require("__reactive-gui__/lib/ui_example")
-local PlayerScope = require("__reactive-gui__/lib/player_scope")
+require("__lambda-ui__/lib/interfaces")
+require("__lambda-ui__/lib/internal_effects")
+local Builder = require("__lambda-ui__/lib/ui_builder")
+local example = require("__lambda-ui__/lib/ui_example")
+local PlayerScope = require("__lambda-ui__/lib/player_scope")
 
 Builder.register(example)
 

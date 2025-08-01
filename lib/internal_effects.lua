@@ -1,11 +1,11 @@
 ---@module "lib/build_results"
-local Built = require("__reactive-gui__/lib/build_results")
+local Built = require("__lambda-ui__/lib/build_results")
 ---@module "lib/ui_builder"
-local Builder = require("__reactive-gui__/lib/ui_builder")
+local Builder = require("__lambda-ui__/lib/ui_builder")
 ---@module "lib/utils"
-local utils = require("__reactive-gui__/lib/utils")
+local utils = require("__lambda-ui__/lib/utils")
 ---@module "lib/function_store"
-local FunctionStore = require("__reactive-gui__/lib/function_store")
+local FunctionStore = require("__lambda-ui__/lib/function_store")
 
 ---@alias ArrayReplacedDescriptor {self:LuaGuiElement,player_index:number,deps:string[],old_table:table,new_table:table}
 

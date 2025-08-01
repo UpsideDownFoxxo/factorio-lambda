@@ -1,5 +1,5 @@
 ---@module "lib/ui_builder"
-local Builder = require("__reactive-gui__/lib/ui_builder")
+local Builder = require("__lambda-ui__/lib/ui_builder")
 local ref = Builder.ref
 
 local item_sprites = {
