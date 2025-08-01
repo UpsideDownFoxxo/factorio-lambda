@@ -3,13 +3,12 @@
 This makes it easy to create UIs that have to display a lot of dynamic data.
 
 # Data Storage
-Data is stored in a subsection of the `storage` global:
+As part of the reactivity mechanism, *Lambda* makes use of proxy objects to track changes to the underlying data. This is limited to specific subsections of the `storage` table to avoid being overly invasive and potentially slowing down/breaking other mod code. This means you have to 'opt in' to the reactivity by saving your data in these sections:
 - `storage.g` is used for global state, accessible to all functions, no matter what player they belong to.
-- `storage.p` is used to save player-specific state. It's only populated inside event handlers (like `_click`) or effects.
-  The raw data for each player lives in the `storage.reactive.players` table
+- `storage.p` is used to save player-specific state. It's only populated inside the context of event handlers (like `_click`) or effects. You can also manually create a context with the '`run`' function of the '`player_scope`' module.
 
 # Components
-A UI component is made up of at least a `props` table, where basic properties of the component are defined.
+A UI component is made up of at least a `props` table, where basic properties of the component are defined. Components (as of now) map 1:1 to in-game ui elements
 ```lua
 local example = {
   props={"button","example-button",caption="Hello World!"}
@@ -41,16 +40,16 @@ Additionally, a component may have the following top-level entries:
 All numeric keys inside a component are considered to be that component's children, and are expected to be valid components themselves.
 
 ## Event Handlers
-Event handlers allow you to react to interactions with components.
+Event handlers allow you to react to interactions with components by binding their respective events to an event handler.
 Currently implemented are:
-- `_click`
-- `_value_changed`
-- `_text_changed`
+- `_click` for click events
+- `_value_changed` for sliders
+- `_text_changed` for text fields
 
 The event handler is a function taking in a single argument, the event data created by the observed interaction.
 The appropriate player data is mounted to `storage.p` and is accessible inside the handler.
 
-## Effect
+## Effects
 Effects are functions that are automatically ran when the component they belong to is created or state their output depends on changes.
 They consist of a function taking in one argument `e`, which provides access to the element and the player index with `e.self` and `e.player_index`, and a table which is used to declare dependencies on data within `storage.g` or `storage.p`
 ```lua
@@ -67,6 +66,7 @@ local data_label = {
   }
 }
 ```
+
 # Dynamic Content
 Sometimes UI contents aren't known ahead of time. In these cases you can use the following tools to declare your components: 
 
