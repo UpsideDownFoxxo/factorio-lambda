@@ -36,7 +36,7 @@ local function create_event_handler(lua_el, event, handler_fn, collected_handler
 	table.insert(collected_handlers, handler_descriptor)
 end
 
----comment
+---Turn element into a LuaGuiElement mounted to `root`
 ---@param el any
 ---@param root LuaGuiElement
 ---@param collected_effects any
