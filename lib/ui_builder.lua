@@ -261,8 +261,9 @@ m.ref = function(str, event)
 	end
 
 	if not el.valid then
+		-- this should not happen, since refs are cleaned up if their parent element is destroyed.
+		-- treat as "not in cache"
 		storage.reactive.refs[event.player_index][str] = nil
-		game.print("removed stale ref")
 		return nil
 	end
 
