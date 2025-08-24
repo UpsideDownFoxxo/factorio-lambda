@@ -20,7 +20,7 @@ local function normalize_props(props)
 	props[2] = nil
 end
 
-local function create_event_handler(lua_el, event, handler_fn, collected_handlers, params)
+local function register_cleanup_handler(lua_el, event, handler_fn, collected_handlers, params)
 	local reactive = storage.reactive
 	local cleanup = reactive.cleanup
 	local handlers = reactive.dynamic.handlers
@@ -55,18 +55,15 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 		normalize_props(el.props)
 	end
 
-	local lua_el
-
 	local opts = {}
 
-	for k, _ in pairs(el.props) do
+	for k, v in pairs(el.props) do
 		if creation_vars[k] then
-			opts[k] = el.props[k]
+			opts[k] = v
 		end
 	end
 
-	---@type LuaGuiElement
-	lua_el = root.add(opts)
+	local lua_el = root.add(opts)
 
 	assert(lua_el, "Failed to create element")
 
@@ -89,15 +86,27 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 	end
 
 	if el._click then
-		create_event_handler(lua_el, defines.events.on_gui_click, el._click, collected_handlers, params)
+		register_cleanup_handler(lua_el, defines.events.on_gui_click, el._click, collected_handlers, params)
 	end
 
 	if el._value_changed then
-		create_event_handler(lua_el, defines.events.on_gui_value_changed, el._value_changed, collected_handlers, params)
+		register_cleanup_handler(
+			lua_el,
+			defines.events.on_gui_value_changed,
+			el._value_changed,
+			collected_handlers,
+			params
+		)
 	end
 
 	if el._text_changed then
-		create_event_handler(lua_el, defines.events.on_gui_text_changed, el._text_changed, collected_handlers, params)
+		register_cleanup_handler(
+			lua_el,
+			defines.events.on_gui_text_changed,
+			el._text_changed,
+			collected_handlers,
+			params
+		)
 	end
 
 	if el._for then

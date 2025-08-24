@@ -22,6 +22,15 @@ m.swap = function(t, a, b)
 	t[b] = tmp
 end
 
+m.reverse = function(t)
+	local new = {}
+	for key, value in pairs(t) do
+		new[value] = key
+	end
+
+	return new
+end
+
 ---Creates a shallow copy of the provided table
 ---@param t table
 ---@return table
