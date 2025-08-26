@@ -6,6 +6,11 @@ local m = {}
 ---@param data table
 ---@return Proxy
 local function get_or_make_proxy(data)
+	-- "data" is already a proxy, just reuse
+	if data.__id then
+		return data
+	end
+
 	return storage.reactive.proxy_cache[data] or m.wrap(data)
 end
 
