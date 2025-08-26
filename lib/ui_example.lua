@@ -2,7 +2,7 @@
 local Builder = require("__lambda-ui__/lib/ui_builder")
 local ref = Builder.ref
 
-local item_sprites = {
+local item_sprite_list = {
 	"inserter",
 	"transport-belt",
 	"stone-furnace",
@@ -13,12 +13,17 @@ local item_sprites = {
 	"laser-turret",
 }
 
-for k, v in pairs(item_sprites) do
+local item_sprites = {}
+for _, v in pairs(item_sprite_list) do
 	---@type {sprite:string,toggled:boolean}
-	item_sprites[k] = { sprite = v, toggled = false }
+	item_sprites[v] = { sprite = v, toggled = false }
 end
 
 ---@cast item_sprites {sprite:string,toggled:boolean}
+
+---@module "lib.player_scope"
+local player_scope = require("__lambda-ui__/lib/player_scope")
+player_scope.default_player_scope.icon_data = item_sprites
 
 ---@type Element
 local example = {
@@ -64,7 +69,7 @@ local example = {
 
 						local t = {}
 						for i = 1, storage.p.icon_num do
-							t[item_sprites[i].sprite] = item_sprites[i]
+							t[i] = storage.p.icon_data[item_sprite_list[i]]
 						end
 						storage.p.icons = t
 					end,
@@ -79,7 +84,7 @@ local example = {
 			},
 			{
         --stylua: ignore
-        props = {"slider","ugg_controls_slider",value=0,minimum_value=0,maximum_value=#item_sprites,style="notched_slider"},
+        props = {"slider","ugg_controls_slider",value=0,minimum_value=0,maximum_value=#item_sprite_list,style="notched_slider"},
 				_value_changed = function(e)
 					storage.p.icon_num = e.element.slider_value
 				end,
@@ -95,10 +100,11 @@ local example = {
 		{
 			props = { "frame", "button_frame", direction = "horizontal", style = "ugg_deep_frame" },
 			{
-				props = { "table", "button_table", column_count = #item_sprites, style = "filter_slot_table" },
+				props = { "table", "button_table", column_count = #item_sprite_list, style = "filter_slot_table" },
 				_for = {
 					"p.icons",
 					key = function(a)
+						print(a.sprite)
 						return a.sprite
 					end,
 				},
@@ -122,7 +128,7 @@ local example = {
 								e.self.toggled = e.params.toggled
 							end,
 							function(p)
-								return { "p.icons." .. p.sprite .. ".toggled" }
+								return { "p.icon_data." .. p.sprite .. ".toggled" }
 							end,
 						},
 					},
