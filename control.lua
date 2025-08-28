@@ -6,7 +6,7 @@ require("util")
 require("__lambda-ui__/lib/interfaces")
 require("__lambda-ui__/lib/internal_effects")
 local Builder = require("__lambda-ui__/lib/ui_builder")
-local example = require("__lambda-ui__/lib/ui_example")
+local example = require("__lambda-ui__/ui_example")
 local PlayerScope = require("__lambda-ui__/lib/player_scope")
 
 Builder.register(example)
@@ -43,3 +43,14 @@ script.on_event(defines.events.on_player_created, function(event)
 
 	Builder.build(example, player.gui.screen)
 end)
+
+remote.add_interface("demo", {
+	open = function(player_index)
+		local player = game.get_player(player_index)
+		if not player then
+			return
+		end
+
+		Builder.build(example, player.gui.screen)
+	end,
+})

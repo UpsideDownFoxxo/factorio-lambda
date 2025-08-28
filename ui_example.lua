@@ -104,7 +104,6 @@ local example = {
 				_for = {
 					"p.icons",
 					key = function(a)
-						print(a.sprite)
 						return a.sprite
 					end,
 				},
