@@ -145,7 +145,6 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 		if type(el.props.drag_target) == "string" then
 			local t = m.ref(el.props.drag_target, { player_index = lua_el.player_index })
 			lua_el.drag_target = t
-			el.props.drag_target = nil
 		else
 			-- we do not question if the user somehow managed to get a valid element reference in here
 			lua_el.drag_target = el.props.drag_target
