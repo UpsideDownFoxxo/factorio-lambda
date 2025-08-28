@@ -53,6 +53,7 @@ Built.fns.array_replaced = function(e)
 	end
 
 	local old_by_key = {}
+	-- we cannot trust old_tables indices to remain the same, so re-index it to key, which is guaranteed to be the same by the user
 	for _, value in pairs(e.old_table) do
 		old_by_key[get_key(value)] = value
 	end
@@ -66,7 +67,6 @@ Built.fns.array_replaced = function(e)
 	for _, value in pairs(e.self.children) do
 		local key = element_to_key[value.index]
 		old_set[key] = old_by_key[key]
-		game.print("Found element for key " .. key)
 	end
 
 	for _, value in pairs(e.new_table) do
@@ -74,12 +74,13 @@ Built.fns.array_replaced = function(e)
 		if old_set[key] then
 			-- the element already existed but was modified, we need to update the param in all the effects
 			if old_set[key] ~= value then
-				table.insert(modified, value)
+				modified[#modified + 1] = value
 			end
+			-- regardless of what happened, we keep this element -> remove from destroy list
 			old_set[key] = nil
 		else
 			-- element doesn't exist, create a new one
-			table.insert(delta_in, value)
+			delta_in[#delta_in + 1] = value
 		end
 	end
 
@@ -88,7 +89,7 @@ Built.fns.array_replaced = function(e)
 		metadata.children[value] = nil
 	end
 
-	for _, value in pairs(modified) do
+	for _, value in ipairs(modified) do
 		local effects = metadata.children[get_key(value)].effects
 		for _, effect in pairs(effects) do
 			if effect.params then
@@ -104,7 +105,7 @@ Built.fns.array_replaced = function(e)
 		end
 	end
 
-	for _, value in pairs(delta_in) do
+	for _, value in ipairs(delta_in) do
 		local el, effects, handlers = Builder.build(metadata.markup, e.self, value)
 		metadata.children[get_key(value)] = { element = el, effects = effects, handlers = handlers }
 	end
