@@ -52,9 +52,21 @@ Built.fns.array_replaced = function(e)
 		return el
 	end
 
-	local old_set = {}
+	local old_by_key = {}
 	for _, value in pairs(e.old_table) do
-		old_set[get_key(value)] = value
+		old_by_key[get_key(value)] = value
+	end
+
+	local element_to_key = {}
+	for key, value in pairs(metadata.children) do
+		element_to_key[value.element.index] = key
+	end
+
+	local old_set = {}
+	for _, value in pairs(e.self.children) do
+		local key = element_to_key[value.index]
+		old_set[key] = old_by_key[key]
+		game.print("Found element for key " .. key)
 	end
 
 	for _, value in pairs(e.new_table) do
@@ -129,6 +141,14 @@ Built.fns.cleanup_effect = function(e)
 	for _, dep in pairs(e.deps) do
 		storage.reactive.effects[dep][e.key] = nil
 	end
+end
+
+Built.fns.cleanup_for = function(e)
+	for _, dep in pairs(e.deps) do
+		storage.reactive.effects[dep][e.key] = nil
+	end
+
+	storage.reactive.dynamic.for_blocks[e.key.ident] = nil
 end
 
 Built.fns.cleanup_ref = function(e)

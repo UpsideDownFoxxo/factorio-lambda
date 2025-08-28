@@ -7,6 +7,10 @@ m.get_ui_ident = function(el)
 	return tostring(el.player_index) .. "|" .. tostring(el.index)
 end
 
+m.get_ui_ident_from_parts = function(index, player_index)
+	return tostring(player_index) .. "|" .. tostring(index)
+end
+
 ----------------------
 -- Table Operations --
 ----------------------

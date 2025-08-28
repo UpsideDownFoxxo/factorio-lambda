@@ -117,8 +117,13 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 
 		-- Replacing the entire table is an action on the parent, so we have to start tracking it here
 		---@type ComponentFunctionDescriptor
-		local replaced_descriptor =
-			{ fn = "array_replaced", self = lua_el, player_index = lua_el.player_index, deps = { dep } }
+		local replaced_descriptor = {
+			fn = "array_replaced",
+			self = lua_el,
+			player_index = lua_el.player_index,
+			deps = { dep },
+			ident = utils.get_ui_ident(lua_el),
+		}
 
 		if not effects[dep] then
 			effects[dep] = {}
@@ -128,7 +133,7 @@ local function build_element(el, root, collected_effects, collected_handlers, pa
 
 		table.insert(collected_effects, replaced_descriptor)
 
-		local cleanup_descriptor = { fn = "cleanup_effect", deps = { dep }, key = replaced_descriptor }
+		local cleanup_descriptor = { fn = "cleanup_for", deps = { dep }, key = replaced_descriptor }
 		cleanup[id] = cleanup[id] or {}
 		table.insert(cleanup[id], cleanup_descriptor)
 
